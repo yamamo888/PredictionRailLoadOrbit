@@ -14,7 +14,7 @@ Created on Thu Oct  4 09:42:54 2018
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+#import tensorflow as tf
 import os
 import datetime as dt
 import heapq
@@ -67,7 +67,7 @@ class trackData():
         self.A['date'] = pd.to_datetime(self.A['date']) 
         self.B['date'] = pd.to_datetime(self.B['date']) 
         self.C['date'] = pd.to_datetime(self.C['date']) 
-        self.D['date'] = pd.to_datetime(self.D['date']) 
+        self.D['date'] = pd.to_datetime(self.D['date'])
         
     #-----------------------------------
     #-----------------------------------
@@ -124,17 +124,48 @@ class equipmentData():
         self.equipmentC = pd.read_csv(equipmentCpath,',')
         self.equipmentD = pd.read_csv(equipmentDpath,',')
     
-             
+class Ar():
+    def __init__(self,x,t):
+        self.x = x
+        self.t = t
+
+        self.xDim = x.shape[1]-1
+        self.xNum = x.shape[0]
+
+        self.tNum = t.shape[0]
+
+        self.p = 3
+
+        self.w = np.random.normal(0.0, pow(100, -0.5), (self.p, 1))
+    
+    #def update(self):
+
+    def predict(self,t):
+        y = np.matmul(self.w.T, t)
+        return y
+
+    def loss(self,x,t):
+        loss = np.sum((t - pow(t - self.predict(x),2)))
+        return loss
+
+
         
 if __name__ == '__main__':
     isWindows = False
     # files
     trackfiles= ['track_A.csv','track_B.csv','track_C.csv','track_D.csv']
     eqpfiles = ['equipment_A.csv','equipment_B.csv','equipment_C.csv','equipment_D.csv']
-    
-    
+
     mytrackData = trackData(trackfiles)
     mytrackData.NaN()
+    #mytrackData.A = mytrackData.A.set_index('date')
+    xData = mytrackData.A.drop(columns='hlr')
+    tData = mytrackData.A[['date','hlr']]
+    
+    pdb.set_trace()
+
+    ar = Ar(xData,tData)
+
     
     #myequipmentData = equipmentData(eqpfiles)
 
