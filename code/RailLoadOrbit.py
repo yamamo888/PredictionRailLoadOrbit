@@ -62,6 +62,7 @@ class trackData():
         self.C = pd.read_csv(trackCpath,',')
         print("Now Loading....")
         self.D = pd.read_csv(trackDpath,',')
+        print("Now Loading.....")
         
         # column ：日本語名->英語名
         self.A.rename(columns={'キロ程':'krage','高低左':'hll','高低右':'hlr','通り左':'sl','通り右':'sr','水準':'level','軌間':'gauge','速度':'v'},inplace=True)
@@ -81,7 +82,7 @@ class trackData():
     ## NaNの処理
     def NaN(self):
         
-        
+        print("Now Loading.")        
         # index をキロ程と日付にする
         self.B.set_index(['krage','date'],inplace=True)
         
@@ -91,8 +92,11 @@ class trackData():
         
         # NaN:線形補完
         self.A.interpolate(method='linear',limit_direction='both',inplace=True)
+        print("Now Loading..")         
         self.B.interpolate(method='linear',limit_direction='both',inplace=True)
+        print("Now Loading...")         
         self.C.interpolate(method='linear',limit_direction='both',inplace=True)
+        print("Now Loading....")         
         self.D.interpolate(method='linear',limit_direction='both',inplace=True)
 
         """
