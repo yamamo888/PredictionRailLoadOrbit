@@ -39,6 +39,7 @@ class trackData():
             self.dataPath = '../data'
             self.visualPath = '../visualization'
         
+        print("Now Loading.")
         # 各開始日
         self.sTimeAC,self.sTimeB,self.sTimeD= pd.to_datetime('2017-04-01'),pd.to_datetime('2017-04-03'),pd.to_datetime('2017-04-09')
         # 終了日
@@ -55,8 +56,11 @@ class trackData():
         
         # 軌道検測csvデータ読み込み
         self.A = pd.read_csv(trackApath,',')
+        print("Now Loading..")
         self.B = pd.read_csv(trackBpath,',')
+        print("Now Loading...")
         self.C = pd.read_csv(trackCpath,',')
+        print("Now Loading....")
         self.D = pd.read_csv(trackDpath,',')
         
         # column ：日本語名->英語名
@@ -136,7 +140,7 @@ class Ar():
 
         self.tNum = t.shape[0]
 
-        self.p = 10
+        self.p = 100
 
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
     
@@ -159,7 +163,7 @@ class Ar():
 
     def loss(self,tDate):
         t = np.array(tDate['hlr'])[np.newaxis]
-        pdb.set_trace()
+        #pdb.set_trace()
         #t = t[t['date'] == '2018-03-31']
         num = pow(t - self.predict(tDate),2)
         loss = np.sum(t - num) / (t.shape[1])
