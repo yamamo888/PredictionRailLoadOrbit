@@ -172,7 +172,7 @@ class Ar():
         sigma0 = np.matmul(z1.T, z1)
         sigma1 = np.matmul(z1.T, y)
         self.w = np.matmul(sigma0, sigma1)
-        pdb.set_trace()
+        #pdb.set_trace()
 
     def predict(self,t):
         #pdb.set_trace()
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     print(y)
     loss = ar.loss(T)
     print(loss)
-    pdb.set_trace()
+    #pdb.set_trace()
 
 
     
