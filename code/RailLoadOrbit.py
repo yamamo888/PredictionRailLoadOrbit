@@ -145,7 +145,7 @@ class Ar():
     def predict(self,t):
         time = []
         for i in range(self.p):
-            time = np.append(time, t['date'][-1:] - datetime.timedelta(day=i))
+            time = np.append(time, t['date'][-1:] - datetime.timedelta(days=i))
         pdb.set_trace()
         #y = self.w[0] + np.matmul(self.w.T, t)
         #return y
