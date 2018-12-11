@@ -195,7 +195,7 @@ class Ar():
         #pdb.set_trace()
         #t = t[t['date'] == '2018-03-31']
         num = pow(t - self.predict(tDate),2)
-        loss = np.sum(num) / (t.shape[1])
+        loss = np.sum(num-t) / (t.shape[1])
         return loss
 
 
