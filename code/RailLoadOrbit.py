@@ -158,7 +158,7 @@ class Ar():
         return y
 
     def loss(self,t):
-        t = np.array(t['hlr'][np.newaxis])
+        t = np.array(t['hlr'])[np.newaxis]
         loss = np.sum((t - pow(t - self.predict(t),2)))
         return loss
 
