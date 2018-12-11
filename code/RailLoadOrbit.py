@@ -146,7 +146,7 @@ class Ar():
         #pdb.set_trace()
         time = []
         for i in range(self.p):
-            time = np.append(time, t['date'][-1:] - datetime.timedelta(days=i))
+            time = np.append(time, (t['date'][-1:] - datetime.timedelta(days=i)).astype(str))
         #y = self.w[0] + np.matmul(self.w.T, t)
         #return y
 
