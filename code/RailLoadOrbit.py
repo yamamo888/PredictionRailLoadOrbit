@@ -152,18 +152,32 @@ class Ar():
     def train(self):
         t = self.t[self.t['date'] == '2018-03-31']
         date = []
-        y = []
-        for i in range(self.p):    
+        z1 = np.empty((self.N*27906,0))
+        for i in range(self.p):
+            z0 = []
             for j in range(self.N):
-                date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i)).astype(str))
-                y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
-        y = y.reshape([self.N,self.p])
+                date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hlr'])
+            #pdb.set_trace()
+            z0 = z0[np.newaxis].T
+            z1 = np.append(z1, z0,axis=1)
+        
+        y = []
+        for i in range(self.N):
+            date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+            y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
+        y = y[np.newaxis].T
+
+        sigma0 = np.matmul(z1.T, z1)
+        sigma1 = np.matmul(z1.T, y)
+        self.w = np.matmul(sigma0, sigma1)
 
     def predict(self,t):
+        #pdb.set_trace()
         date = []
         y = []
         for i in range(self.p):
-            date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i)).astype(str))
+            date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
             y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
         y = y.reshape([self.p,t.shape[0]])
 
@@ -199,12 +213,11 @@ if __name__ == '__main__':
     ar = Ar(xData,tData)
     
     T = tData[tData['date'] == '2018-03-31']
+    ar.train()
     y = ar.predict(T)
     print(y)
     loss = ar.loss(T)
     print(loss)
-    train = ar.train()
-    print(train)
     pdb.set_trace()
 
 
