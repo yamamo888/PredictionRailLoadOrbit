@@ -144,11 +144,20 @@ class Ar():
 
         self.tNum = t.shape[0]
 
+        self.N = 200
         self.p = 100
 
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
     
-    #def train(self):
+    def train(self):
+        t = self.t[self.t['date'] == '2018-03-31']
+        date = []
+        y = []
+        for i in range(self.p):    
+            for j in range(self.N):
+                date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i)).astype(str))
+                y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
+        y = y.reshape([self.N,self.p])
 
     def predict(self,t):
         date = []
@@ -191,10 +200,12 @@ if __name__ == '__main__':
     
     T = tData[tData['date'] == '2018-03-31']
     y = ar.predict(T)
-    loss = ar.loss(T)
-    pdb.set_trace()
     print(y)
+    loss = ar.loss(T)
     print(loss)
+    train = ar.train()
+    print(train)
+    pdb.set_trace()
 
 
     
