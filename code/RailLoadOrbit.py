@@ -143,7 +143,6 @@ class Ar():
     #def train(self):
 
     def predict(self,t):
-        #pdb.set_trace()
         date = []
         y = []
         for i in range(self.p):
@@ -151,6 +150,7 @@ class Ar():
             y = np.append(y, t[t['date'] == date[-1]]['hlr'])
         print("date :\n", date)
         print("y :\n", y)
+        pdb.set_trace()
 
         #y = self.w[0] + np.matmul(self.w.T, t)
         #return y
@@ -169,7 +169,7 @@ if __name__ == '__main__':
 
     mytrackData = trackData(trackfiles)
     mytrackData.NaN()
-    pdb.set_trace()
+    #pdb.set_trace()
     xData = mytrackData.A.drop('hlr',axis=1)
     tData = mytrackData.A[['date','hlr']]
     
