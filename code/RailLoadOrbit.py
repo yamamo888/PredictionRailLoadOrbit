@@ -138,7 +138,7 @@ class Ar():
 
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p, 1))
     
-    #def update(self):
+    #def train(self):
 
     def predict(self,t):
         y = np.matmul(self.w.T, t)
@@ -158,18 +158,12 @@ if __name__ == '__main__':
 
     mytrackData = trackData(trackfiles)
     mytrackData.NaN()
-    #plt.scatter(mytrackData.A['sr'][:1000], mytrackData.A['sl'][:1000])
-    #plt.show()
-    #pdb.set_trace() 
-    #mytrackData.A = mytrackData.A.set_index('date')
+    pdb.set_trace()
     xData = mytrackData.A.drop(columns='hlr')
     tData = mytrackData.A[['date','hlr']]
-    
-    pdb.set_trace()
 
     ar = Ar(xData,tData)
 
-    
     #myequipmentData = equipmentData(eqpfiles)
 
 
