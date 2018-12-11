@@ -143,10 +143,10 @@ class Ar():
     #def train(self):
 
     def predict(self,t):
+        #pdb.set_trace()
         time = []
         for i in range(self.p):
             time = np.append(time, t['date'][-1:] - datetime.timedelta(days=i))
-        pdb.set_trace()
         #y = self.w[0] + np.matmul(self.w.T, t)
         #return y
 
@@ -164,7 +164,7 @@ if __name__ == '__main__':
 
     mytrackData = trackData(trackfiles)
     mytrackData.NaN()
-    pdb.set_trace()
+    #pdb.set_trace()
     xData = mytrackData.A.drop('hlr',axis=1)
     tData = mytrackData.A[['date','hlr']]
     
