@@ -127,7 +127,7 @@ class equipmentData():
         self.equipmentD = pd.read_csv(equipmentDpath,',')
     
 class Ar():
-    def __init__(self,x,t,time):
+    def __init__(self,x,t):
         self.x = x
         self.t = t
 
@@ -143,8 +143,11 @@ class Ar():
     #def train(self):
 
     def predict(self,t):
-
-        y = self.w[0] + np.matmul(self.w.T, t)
+        time = []
+        for i in range(self.p):
+            time = np.append(time, t['date'][-1:] - datetime.timedelta(day=i))
+        pdb.set_trace()
+        #y = self.w[0] + np.matmul(self.w.T, t)
         return y
 
     def loss(self,x,t):
@@ -164,8 +167,13 @@ if __name__ == '__main__':
     pdb.set_trace()
     xData = mytrackData.A.drop('hlr',axis=1)
     tData = mytrackData.A[['date','hlr']]
-
+    
     ar = Ar(xData,tData)
+    
+    T = tData[tData['date'] == '2018-03-31']
+    ar.predict(T)
+
+    
 
     #myequipmentData = equipmentData(eqpfiles)
 
