@@ -192,6 +192,7 @@ if __name__ == '__main__':
     T = tData[tData['date'] == '2018-03-31']
     y = ar.predict(T)
     loss = ar.loss(T)
+    pdb.set_trace()
     print(y)
     print(loss)
 
