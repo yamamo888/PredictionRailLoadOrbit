@@ -148,7 +148,7 @@ class Ar():
             time = np.append(time, t['date'][-1:] - datetime.timedelta(day=i))
         pdb.set_trace()
         #y = self.w[0] + np.matmul(self.w.T, t)
-        return y
+        #return y
 
     def loss(self,x,t):
         loss = np.sum((t - pow(t - self.predict(x),2)))
