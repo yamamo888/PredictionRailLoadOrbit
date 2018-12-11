@@ -159,6 +159,7 @@ class Ar():
 
     def loss(self,t):
         #t = np.array(t['hlr'])[np.newaxis]
+        pdb.set_trace()
         t = t[t['date'] == '2018-03-31']
         loss = np.sum((t - pow(t - self.predict(t),2)))
         return loss
