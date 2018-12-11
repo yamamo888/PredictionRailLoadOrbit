@@ -138,7 +138,7 @@ class Ar():
 
         self.p = 10
 
-        self.w = np.random.normal(0.0, pow(100, -0.5), (self.p, 1))
+        self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
     
     #def train(self):
 
@@ -148,11 +148,12 @@ class Ar():
         for i in range(self.p):
             date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i)).astype(str))
             y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
+        y.reshape([self.p,t.shape[0]])
         print("date :\n", date)
         print("y :\n", y)
         pdb.set_trace()
 
-        #y = self.w[0] + np.matmul(self.w.T, t)
+        y = self.w[0] + np.matmul(self.w[1:].T, t)
         #return y
 
     def loss(self,x,t):
