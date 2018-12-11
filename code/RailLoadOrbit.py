@@ -147,7 +147,7 @@ class Ar():
         y = []
         for i in range(self.p):
             date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i)).astype(str))
-            y = np.append(y, t[t['date'] == date[-1]]['hlr'])
+            y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
         print("date :\n", date)
         print("y :\n", y)
         pdb.set_trace()
