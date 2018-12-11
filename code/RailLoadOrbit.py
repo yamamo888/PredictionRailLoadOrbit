@@ -24,6 +24,8 @@ mpl.use('Agg')
 
 import matplotlib.pylab as plt
 
+import datetime
+
 import pdb
 
 
@@ -125,7 +127,7 @@ class equipmentData():
         self.equipmentD = pd.read_csv(equipmentDpath,',')
     
 class Ar():
-    def __init__(self,x,t):
+    def __init__(self,x,t,time):
         self.x = x
         self.t = t
 
@@ -134,14 +136,15 @@ class Ar():
 
         self.tNum = t.shape[0]
 
-        self.p = 3
+        self.p = 10
 
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p, 1))
     
     #def train(self):
 
     def predict(self,t):
-        y = np.matmul(self.w.T, t)
+
+        y = self.w[0] + np.matmul(self.w.T, t)
         return y
 
     def loss(self,x,t):
