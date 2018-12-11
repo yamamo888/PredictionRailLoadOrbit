@@ -171,6 +171,7 @@ class Ar():
         sigma0 = np.matmul(z1.T, z1)
         sigma1 = np.matmul(z1.T, y)
         self.w = np.matmul(sigma0, sigma1)
+        pdb.set_trace()
 
     def predict(self,t):
         #pdb.set_trace()
