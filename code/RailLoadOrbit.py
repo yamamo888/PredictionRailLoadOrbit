@@ -14,7 +14,7 @@ Created on Thu Oct  4 09:42:54 2018
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+#import tensorflow as tf
 import os
 import datetime as dt
 import heapq
@@ -135,7 +135,9 @@ if __name__ == '__main__':
     
     mytrackData = trackData(trackfiles)
     mytrackData.NaN()
-    
+    plt.scatter(mytrackData.A['sr'][:1000], mytrackData.A['sl'][:1000])
+    plt.show()
+    #pdb.set_trace() 
     #myequipmentData = equipmentData(eqpfiles)
 
 
