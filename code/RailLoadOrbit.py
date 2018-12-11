@@ -152,14 +152,14 @@ class Ar():
 
         #print("date :\n", date)
         #print("y :\n", y)
-        pdb.set_trace()
+        #pdb.set_trace()
         
         y = self.w[0] + np.matmul(self.w[1:].T, y)
-        print(y)
         return y
 
-    def loss(self,x,t):
-        loss = np.sum((t - pow(t - self.predict(x),2)))
+    def loss(self,t):
+        t = np.array(t['hlr'][np.newaxis])
+        loss = np.sum((t - pow(t - self.predict(t),2)))
         return loss
 
 
@@ -179,7 +179,11 @@ if __name__ == '__main__':
     ar = Ar(xData,tData)
     
     T = tData[tData['date'] == '2018-03-31']
-    ar.predict(T)
+    y = ar.predict(T)
+    loss = ar.loss(tData)
+    print(y)
+    print(loss)
+
 
     
 
