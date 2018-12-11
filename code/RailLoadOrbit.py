@@ -149,12 +149,14 @@ class Ar():
             date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i)).astype(str))
             y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
         y = y.reshape([self.p,t.shape[0]])
-        print("date :\n", date)
-        print("y :\n", y)
-        pdb.set_trace()
 
+        #print("date :\n", date)
+        #print("y :\n", y)
+        #pdb.set_trace()
+        
         y = self.w[0] + np.matmul(self.w[1:].T, y)
-        #return y
+        print(y)
+        return y
 
     def loss(self,x,t):
         loss = np.sum((t - pow(t - self.predict(x),2)))
