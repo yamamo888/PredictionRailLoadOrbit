@@ -152,7 +152,7 @@ class Ar():
 
         #print("date :\n", date)
         #print("y :\n", y)
-        #pdb.set_trace()
+        pdb.set_trace()
         
         y = self.w[0] + np.matmul(self.w[1:].T, y)
         print(y)
