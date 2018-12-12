@@ -144,7 +144,7 @@ class Ar():
 
         self.tNum = t.shape[0]
 
-        self.N = 10
+        self.N = 100
         self.p = 10
 
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
@@ -157,7 +157,7 @@ class Ar():
             z0 = []
             for j in range(self.N):
                 date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hlr'])
+                z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hll'])
             #pdb.set_trace()
             z0 = z0[np.newaxis].T
             z1 = np.append(z1, z0,axis=1)
@@ -166,7 +166,7 @@ class Ar():
         y = []
         for i in range(self.N):
             date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-            y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
+            y = np.append(y, self.t[self.t['date'] == date[-1]]['hll'])
         y = y[np.newaxis].T
 
         sigma0 = np.matmul(z1.T, z1)
@@ -180,7 +180,7 @@ class Ar():
         y = []
         for i in range(self.p):
             date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-            y = np.append(y, self.t[self.t['date'] == date[-1]]['hlr'])
+            y = np.append(y, self.t[self.t['date'] == date[-1]]['hll'])
         y = y.reshape([self.p,t.shape[0]])
 
         #print("date :\n", date)
@@ -191,7 +191,7 @@ class Ar():
         return y
 
     def loss(self,tDate):
-        t = np.array(tDate['hlr'])[np.newaxis]
+        t = np.array(tDate['hll'])[np.newaxis]
         pdb.set_trace()
         #t = t[t['date'] == '2018-03-31']
         num = pow(t - self.predict(tDate),2)
@@ -209,8 +209,8 @@ if __name__ == '__main__':
     mytrackData = trackData(trackfiles)
     mytrackData.NaN()
     #pdb.set_trace()
-    xData = mytrackData.A.drop('hlr',axis=1)
-    tData = mytrackData.A[['date','hlr']]
+    xData = mytrackData.A.drop('hll',axis=1)
+    tData = mytrackData.A[['date','hll']]
     
     ar = Ar(xData,tData)
     
