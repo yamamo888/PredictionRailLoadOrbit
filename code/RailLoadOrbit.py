@@ -145,7 +145,7 @@ class Ar():
         self.tNum = t.shape[0]
 
         self.N = 100
-        self.p = 10
+        self.p = 50
 
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
     
