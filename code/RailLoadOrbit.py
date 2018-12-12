@@ -144,15 +144,15 @@ class Ar():
 
         self.tNum = t.shape[0]
 
-        self.N = 10
-        self.p = 10
+        self.N = 50
+        self.p = 50
 
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
     
     def train(self):
         t = self.t[self.t['date'] == '2018-03-31']
         date = []
-        z1 = np.empty((self.N*27906,0))
+        z1 = np.empty((self.N*t.shape[0],0))
         for i in range(self.p):
             z0 = []
             for j in range(self.N):
