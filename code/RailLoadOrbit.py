@@ -150,7 +150,6 @@ class Ar():
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
     
     def train(self):
-        pdb.set_trace()
         t = self.t[self.t['date'] == '2018-03-31']
         date = []
         z1 = np.empty((self.N*t.shape[0],0))
@@ -164,6 +163,7 @@ class Ar():
             #pdb.set_trace()
             z0 = z0[np.newaxis].T
             z1 = np.append(z1, z0,axis=1)
+            pdb.set_trace()
         z1 = np.append(z1, np.ones([z1.shape[0],1]),axis=1)
         
         y = []
