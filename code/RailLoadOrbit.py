@@ -150,6 +150,7 @@ class Ar():
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
     
     def train(self):
+        pdb.set_trace()
         t = self.t[self.t['date'] == '2018-03-31']
         date = []
         z1 = np.empty((self.N*t.shape[0],0))
@@ -158,6 +159,8 @@ class Ar():
             for j in range(self.N):
                 date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hll'])
+                #date.append((t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                #z0.append(self.t[self.t['date'] == date[-1]]['hll'])
             #pdb.set_trace()
             z0 = z0[np.newaxis].T
             z1 = np.append(z1, z0,axis=1)
