@@ -101,6 +101,7 @@ class pre_processing:
 
     #------------------------------------
     # ファイル出力を行う
+    #
     def file_output(self, fname, data):
         fullpath = os.path.join(self.dataPath, fname)
 
@@ -126,6 +127,9 @@ if __name__ == "__main__":
     for no in ['A', 'B', 'C', 'D']:
         # trainデータについて
         xTrain[no], tTrain[no] = myData.get_train_data(no)
+        print("【xTrain_{}】\n{}\n".format(no, xTrain[no]))
+        print("【tTrain_{}】\n{}\n".format(no, tTrain[no]))
+        """
         # ファイル出力
         # 説明変数
         fname = "xTrain_{}.txt".format(no)
@@ -133,9 +137,13 @@ if __name__ == "__main__":
         # 目的変数
         fname = "tTrain_{}.txt".format(no)
         myData.file_output(fname, tTrain[no])
+        """
 
         # testデータについて
         xTest[no], tTest[no] = myData.get_test_data(no)
+        print("【xTest_{}】\n{}\n".format(no, xTest[no]))
+        print("【tTest_{}】\n{}\n".format(no, tTest[no]))
+        """
         # ファイル出力
         # 説明変数
         fname = "xTest_{}.txt".format(no)
@@ -143,6 +151,7 @@ if __name__ == "__main__":
         # 目的変数
         fname = "tTest_{}.txt".format(no)
         myData.file_output(fname, tTest[no])
+        """
 
 #メインの終わり
 #-------------------
