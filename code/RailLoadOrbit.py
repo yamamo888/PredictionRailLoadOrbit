@@ -152,20 +152,20 @@ class Ar():
     def train(self):
         t = self.t[self.t['date'] == '2018-03-31']
         date = []
-        #z1 = np.empty((self.N*t.shape[0],0))
-        z1 = []
+        z1 = np.empty((self.N*t.shape[0],0))
+        #z1 = []
         for i in range(self.p):
             z0 = []
             for j in range(self.N):
                 pdb.set_trace()
-                #date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                #z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hll'])
-                date.append((t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                z0.append(self.t[self.t['date'] == date[-1]]['hll'])
+                date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hll'])
+                #date.append((t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                #z0.append(self.t[self.t['date'] == date[-1]]['hll'])
             #pdb.set_trace()
             z0 = z0[np.newaxis].T
             z1 = np.append(z1, z0,axis=1)
-        z1 = np.array(z1).reshape(1395300, 50)
+        #z1 = np.array(z1).reshape(1395300, 50)
         #pdb.set_trace()
         z1 = np.append(z1, np.ones([z1.shape[0],1]),axis=1)
         
