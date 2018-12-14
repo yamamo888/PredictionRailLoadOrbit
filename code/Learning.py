@@ -137,7 +137,7 @@ if __name__ == "__main__":
     w_list = []
 
     for no in range(len(fileind)):
-        ar = Ar(mytrackData.xTrain[0],mytrackData.tTrain[0])
+        ar = Ar(mytrackData.train_xData[0],mytrackData.train_tData[0])
         # ar_list.append(ar)
         ar.train()
         w_list.append(ar.w)
