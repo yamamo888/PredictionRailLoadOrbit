@@ -1,148 +1,190 @@
-import datetime as dt
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+#import tensorflow as tf
 import os
-#import matplotlib.pylab as plt   #折れ線グラフを作るやつ
-import matplotlib.pyplot as plt
+import datetime as dt
+import heapq
+import pickle
+import matplotlib as mpl
+mpl.use('Agg')
+
+import matplotlib.pylab as plt
+
+import datetime
+
+import pdb
 
 
-#-------------------
-# pre_processingクラスの定義定義始まり
-class pre_processing:
-    dataPath = 'data'  # データのフォルダ名
+class trackData():
+    def __init__(self,fname,trainRatio=0.8):
+        # dataPath & visualPath
+        self.trainPer = trainRatio
 
-    #------------------------------------
-    # CSVファイルの読み込み
-    def __init__(self):
-        # trainデータの割合
-        self.trainPer = 0.8
+        if isWindows == True:
+            self.dataPath = '..\\data'
+            self.visualPath = '..\\visualization'
+        else:
+            self.dataPath = '../data'
+            self.visualPath = '../visualization'
 
-        # 軌道検測データの読み込み
-        self.track = {}
-        for no in ['A', 'B', 'C', 'D']:
-            self.track[no] = pd.read_csv(os.path.join(self.dataPath, "track_{}.csv".format(no)), parse_dates=["date"])
+        print("Now Loading.")
+        # 各開始日
+        self.sTimeAC,self.sTimeB,self.sTimeD= pd.to_datetime('2017-04-01'),pd.to_datetime('2017-04-03'),pd.to_datetime('2017-04-09')
+        # 終了日
+        eTime = pd.to_datetime('2018-03-31')
+        # 各学習データ期間
+        self.timeAC,self.timeB,self.timeD = (eTime-self.sTimeAC).days+1,(eTime-self.sTimeB).days+1,(eTime-self.sTimeD).days+1
 
-        """とりあえずまだ使わない
-        # 設備台帳データの読み込み
-        self.equipment = {}
-        for no in ['A', 'B', 'C', 'D']:
-            self.equipment[no] = pd.read_csv(os.path.join(self.dataPath, "equipment_{}.csv".format(no)))
+
+        # trackFilesPath
+        trackApath = os.path.join(self.dataPath,fname[0])
+        trackBpath = os.path.join(self.dataPath,fname[1])
+        trackCpath = os.path.join(self.dataPath,fname[2])
+        trackDpath = os.path.join(self.dataPath,fname[3])
+
+        # 軌道検測csvデータ読み込み
+        self.A = pd.read_csv(trackApath,',')
+        print("Now Loading..")
+        self.B = pd.read_csv(trackBpath,',')
+        print("Now Loading...")
+        self.C = pd.read_csv(trackCpath,',')
+        print("Now Loading....")
+        self.D = pd.read_csv(trackDpath,',')
+        print("Now Loading.....")
+
+        # column ：日本語名->英語名
+        self.A.rename(columns={'キロ程':'krage','高低左':'hll','高低右':'hlr','通り左':'sl','通り右':'sr','水準':'level','軌間':'gauge','速度':'v'},inplace=True)
+        self.B.rename(columns={'キロ程':'krage','高低左':'hll','高低右':'hlr','通り左':'sl','通り右':'sr','水準':'level','軌間':'gauge','速度':'v'},inplace=True)
+        self.C.rename(columns={'キロ程':'krage','高低左':'hll','高低右':'hlr','通り左':'sl','通り右':'sr','水準':'level','軌間':'gauge','速度':'v'},inplace=True)
+        self.D.rename(columns={'キロ程':'krage','高低左':'hll','高低右':'hlr','通り左':'sl','通り右':'sr','水準':'level','軌間':'gauge','速度':'v'},inplace=True)
+
+        # date列：object型->datetime型
+        self.A['date'] = pd.to_datetime(self.A['date'])
+        self.B['date'] = pd.to_datetime(self.B['date'])
+        self.C['date'] = pd.to_datetime(self.C['date'])
+        self.D['date'] = pd.to_datetime(self.D['date'])
+
+        self.NaN()
+        x,t = self.devide()
+        self.get_train_test_data(x,t)
+
+    #-----------------------------------
+    #-----------------------------------
+
+    ## NaNの処理
+    def NaN(self):
+
+        print("Now Loading.")
+        # index をキロ程と日付にする
+        # self.B.set_index(['krage','date'],inplace=True)
+
+        # # 始めと終わりのインデックス
+        # sInd = self.B.index[0][0]
+        # eInd = self.B.index[-1][0]
+
+        # NaN:線形補完
+        self.A.interpolate(method='linear',limit_direction='both',inplace=True)
+        print("Now Loading..")
+        self.B.interpolate(method='linear',limit_direction='both',inplace=True)
+        print("Now Loading...")
+        self.C.interpolate(method='linear',limit_direction='both',inplace=True)
+        print("Now Loading....")
+        self.D.interpolate(method='linear',limit_direction='both',inplace=True)
+
         """
-    #------------------------------------
+        # NaN:時系列を考慮した補完(未実装)
+        flag = False
+        for kInd in np.arange(sInd,eInd):
 
-    #------------------------------------
-    # 欠損データを補完する
-    # 平均からばらつきを考慮して補完する
-    def complement(self, data, column):
-        ave = data[column].mean()  #平均値
-        std = data[column].std()  #標準偏差
-        cnt_null = data[column].isnull().sum()  #欠損データの総数
+            tmp = self.B.loc[kInd]
+            tmp.interpolate(mehod='time',limit_direction='both',inplace=True)
 
-        # 正規分布に従うとし標準偏差の範囲内でランダムに数字を作る
-        rnd = np.random.randint(ave - std, ave + std, size=cnt_null)
+            if not flag:
+                self.trackB = tmp
+                flag = True
+            else:
+                pd.concat([self.trackB,tmp])"""
 
-        data[column][np.isnan(data[column])] = rnd
-    #------------------------------------
+    def devide(self):
+        xData_A = self.A.drop('hll',axis=1)
+        tData_A = self.A[['date','hll']]
 
-    #------------------------------------
-    # 説明変数と目的変数に分ける
-    def divide(self, data):
-        self.complement(data, "高低左")
-        self.complement(data, "高低右")
-        self.complement(data, "通り左")
-        self.complement(data, "通り右")
-        self.complement(data, "水準")
-        self.complement(data, "軌間")
-        self.complement(data, "速度")
+        xData_B = self.B.drop('hll',axis=1)
+        tData_B = self.B[['date','hll']]
 
-        # 目的変数である高低左を削除する
-        x = data.drop(["高低左"], axis=1).values
-        t = data[["高低左"]].values
+        xData_C = self.C.drop('hll',axis=1)
+        tData_C = self.C[['date','hll']]
 
-        return x, t
-    #------------------------------------
+        xData_D = self.D.drop('hll',axis=1)
+        tData_D = self.D[['date','hll']]
 
-    #------------------------------------
-    # 今のところはtrackデータのみ使う
-    # trainデータを読み込む
-    def get_train_data(self, no):
-        trainInd = {}
-        x = {}
-        t = {}
-        xTrain = {}
-        tTrain = {}
+        xData = [xData_A,xData_B,xData_C,xData_D]
+        tData = [tData_A,tData_B,tData_C,tData_D]
+        return xData,tData
 
-        x[no], t[no] = self.divide(self.track[no])
+    def get_train_test_data(self,x,t):
+        fNum = len(x)
 
-        trainInd[no] = int(len(self.track[no])*self.trainPer)
-        xTrain[no] = x[no][:trainInd[no]]
-        tTrain[no] = t[no][:trainInd[no]]
+        self.train_xData = []
+        self.test_xData = []
+        self.train_tData = []
+        self.test_tData = []
 
-        return xTrain[no], tTrain[no]
-    #------------------------------------
+        for no in range(fNum):#trainとtestの作成
+            xNum = x[no].shape[0]
+            traNum = int(xNum*self.trainPer)
+            self.train_xData.append(x[no][:traNum])
+            self.test_xData.append(x[no][traNum:])
+            self.train_tData.append(t[no][:traNum])
+            self.test_tData.append(t[no][traNum:])
 
-    #------------------------------------
-    # testデータを読み込む
-    def get_test_data(self, no):
-        trainInd = {}
-        x = {}
-        t = {}
-        xTest = {}
-        tTest = {}
+    def dump_data(self):
+        fileind = ['A','B','C','D']
 
-        x[no], t[no] = self.divide(self.track[no])
+        for no in range(len(fileind)):
+            fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
+            fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
+            fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
+            fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
 
-        trainInd[no] = int(len(self.track[no])*self.trainPer)
-        xTest[no] = x[no][trainInd[no]:]
-        tTest[no] = t[no][trainInd[no]:]
+            self.dump_file(fname_xTra, self.train_xData[no])
+            self.dump_file(fname_xTes, self.test_xData[no])
+            self.dump_file(fname_tTra, self.train_tData[no])
+            self.dump_file(fname_tTes, self.test_tData[no])
 
-        return xTest[no], tTest[no]
-    #------------------------------------
+    def dump_file(self,filename,data):
+        f = open(filename,'wb')
+        pickle.dump(data,f)
+        f.close
 
-    #------------------------------------
-    # ファイル出力を行う
-    def file_output(self, fname, data):
-        fullpath = os.path.join(self.dataPath, fname)
+    #-----------------------------------
+    #-----------------------------------
 
-        f = open(fullpath)
-        with open(fname, mode='w') as f:
-            file.writelines(data)
 
-        f.close()
-    #------------------------------------
-# pre_processingクラスの定義終わり
-#-------------------
+## 設備要因
+class equipmentData():
+    def __init__(self,fname):
 
-#-------------------
-# メインの始まり
+        # equipmentFilesPath
+        equipmentApath = os.path.join(self.dataPath,fname[4])
+        equipmentBpath = os.path.join(self.dataPath,fname[5])
+        equipmentCpath = os.path.join(self.dataPath,fname[6])
+        equipmentDpath = os.path.join(self.dataPath,fname[7])
+
+        # 設備台帳データ
+        self.equipmentA = pd.read_csv(equipmentApath,',')
+        self.equipmentB = pd.read_csv(equipmentBpath,',')
+        self.equipmentC = pd.read_csv(equipmentCpath,',')
+        self.equipmentD = pd.read_csv(equipmentDpath,',')
+
 if __name__ == "__main__":
-    xTrain= {}
-    tTrain = {}
-    xTest = {}
-    tTest = {}
 
-    myData = pre_processing()
+    isWindows = True
 
-    for no in ['A', 'B', 'C', 'D']:
-        # trainデータについて
-        xTrain[no], tTrain[no] = myData.get_train_data(no)
-        # ファイル出力
-        # 説明変数
-        fname = "xTrain_{}.txt".format(no)
-        myData.file_output(fname, xTrain[no])
-        # 目的変数
-        fname = "tTrain_{}.txt".format(no)
-        myData.file_output(fname, tTrain[no])
+    trackfiles= ['track_A.csv','track_B.csv','track_C.csv','track_D.csv']
+    # eqpfiles = ['equipment_A.csv','equipment_B.csv','equipment_C.csv','equipment_D.csv']
 
-        # testデータについて
-        xTest[no], tTest[no] = myData.get_test_data(no)
-        # ファイル出力
-        # 説明変数
-        fname = "xTest_{}.txt".format(no)
-        myData.file_output(fname, xTest[no])
-        # 目的変数
-        fname = "tTest_{}.txt".format(no)
-        myData.file_output(fname, tTest[no])
+    myData = trackData(trackfiles)
 
-#メインの終わり
-#-------------------
+    myData.dump_data()
