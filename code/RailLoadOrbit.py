@@ -157,16 +157,16 @@ class Ar():
         for i in range(self.p):
             z0 = []
             for j in range(self.N):
-                #date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                #z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hll'])
-                date.append((t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hll'])
+                #date.append((t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 pdb.set_trace()
-                z0.append(self.t[self.t['date'] == date[-1]]['hll'])
+                #z0.append(self.t[self.t['date'] == date[-1]]['hll'])
             #pdb.set_trace()
             z0 = z0[np.newaxis].T
             z1 = np.append(z1, z0,axis=1)
         z1 = np.array(z1).reshape(1395300, 50)
-        pdb.set_trace()
+        #pdb.set_trace()
         z1 = np.append(z1, np.ones([z1.shape[0],1]),axis=1)
         
         y = []
