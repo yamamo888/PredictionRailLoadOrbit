@@ -163,7 +163,7 @@ class Ar():
             #pdb.set_trace()
             z0 = z0[np.newaxis].T
             z1 = np.append(z1, z0,axis=1)
-            pdb.set_trace()
+        pdb.set_trace()
         z1 = np.append(z1, np.ones([z1.shape[0],1]),axis=1)
         
         y = []
