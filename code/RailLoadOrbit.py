@@ -160,6 +160,7 @@ class Ar():
                 #date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 #z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hll'])
                 date.append((t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                pdb.set_trace()
                 z0.append(self.t[self.t['date'] == date[-1]]['hll'])
             #pdb.set_trace()
             z0 = z0[np.newaxis].T
