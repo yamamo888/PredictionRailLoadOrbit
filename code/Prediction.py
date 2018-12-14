@@ -38,19 +38,24 @@ class prediction():
         self.p = 50
         self.N = 50
 
-    def predict(self,t):
+    def predict(self,day):
         #pdb.set_trace()
-        date = []
+        xNum = self.t.shape[0]
+        aDay = dt.timedelta(days=1)
         y = []
         for i in range(self.p):
-            date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-            y = np.append(y, self.t[self.t['date'] == date[-1]]['hll'])
-            y = y.reshape([self.p,t.shape[0]])
+            date = day - aDay * i
+            y = np.append(y,self.t[self.t['date'] == date]['hll'])
+            y = y.reshape([self.p,xNum])
+        #     date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+        #     y = np.append(y, self.t[self.t['date'] == date[-1]]['hll'])
+        #     y = y.reshape([self.p,t.shape[0]])
         #print("date :\n", date)
         #print("y :\n", y)
         #pdb.set_trace()
-
         y = self.w[0] + np.matmul(self.w[1:].T, y)
+        df = pd.DataFrame([[day,y]],index=[xNum],columns=['date','hll'])
+        self.t = pd.concat(self.t,df)
         return y
 
     def loss(self,tDate):
@@ -69,29 +74,22 @@ class prediction():
         plt.show()
 
 class trackData():
-    def __init__(self):#testの読み込み
-
-        self.w_list = []
-        # self.train_xData = []
-        self.test_xData = []
-        # self.train_tData = []
-        self.test_tData = []
-
+    def __init__(self):
+        self.train_xData = []
+        # self.test_xData = []
+        self.train_tData = []
+        # self.test_tData = []
         fileind = ['A','B','C','D']
-
         for no in range(len(fileind)):
-            # fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
-            fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
-            # fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
-            fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
-
-            # self.load_file(fname_xTra,self.train_xData)
-            self.load_file(fname_xTes,self.test_xData)
-            # self.load_file(fname_tTra,self.train_tData)
-            self.load_file(fname_tTes,self.test_tData)
-
-        self.load_file("w_list.binaryfile",self.w_list)
-
+            self.load_file("w_list.binaryfile",self.w_list)
+            fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
+            # fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
+            fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
+            # fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
+            self.load_file(fname_xTra,self.train_xData)
+            # self.load_file(fname_xTes,self.test_xData)
+            self.load_file(fname_tTra,self.train_tData)
+            # self.load_file(fname_tTes,self.test_tData)
 
     def load_file(self,filename,data):
         f = open(filename,'rb')
@@ -103,7 +101,7 @@ if __name__ == "__main__":
 
     myData=trackData()
 
-    pre = prediction(myData.w_list,myData.test_xData,myData.test_tData)
+    pre = prediction(myData.w_list,myData.train_xData,myData.train_tData)
 
     aDay = dt.timedelta(days=1)
     sDate = dt.date(2018,4,1)
@@ -119,7 +117,7 @@ if __name__ == "__main__":
         y.append(pre.predict(date))
         # loss.append(pre.loss(date))
 
-    pre.showY(range(nite),y)
+    # pre.showY(range(nite),y)
     # pre.showLoss(range(nite),loss)
 
     output = pd.DataFrame(y,columns="高低左")

@@ -127,31 +127,31 @@ class trackData():
         fNum = len(x)
 
         self.train_xData = []
-        self.test_xData = []
+        # self.test_xData = []
         self.train_tData = []
-        self.test_tData = []
+        # self.test_tData = []
 
         for no in range(fNum):#trainとtestの作成
             xNum = x[no].shape[0]
             traNum = int(xNum*self.trainPer)
-            self.train_xData.append(x[no][:traNum])
-            self.test_xData.append(x[no][traNum:])
-            self.train_tData.append(t[no][:traNum])
-            self.test_tData.append(t[no][traNum:])
+            self.train_xData.append(x[no])
+            # self.test_xData.append(x[no][traNum:])
+            self.train_tData.append(t[no])
+            # self.test_tData.append(t[no][traNum:])
 
     def dump_data(self):
         fileind = ['A','B','C','D']
 
         for no in range(len(fileind)):
             fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
-            fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
+            # fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
             fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
-            fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
+            # fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
 
             self.dump_file(fname_xTra, self.train_xData[no])
-            self.dump_file(fname_xTes, self.test_xData[no])
+            # self.dump_file(fname_xTes, self.test_xData[no])
             self.dump_file(fname_tTra, self.train_tData[no])
-            self.dump_file(fname_tTes, self.test_tData[no])
+            # self.dump_file(fname_tTes, self.test_tData[no])
 
     def dump_file(self,filename,data):
         f = open(filename,'wb')
@@ -180,7 +180,7 @@ class equipmentData():
 
 if __name__ == "__main__":
 
-    isWindows = True
+    isWindows = False
 
     trackfiles= ['track_A.csv','track_B.csv','track_C.csv','track_D.csv']
     # eqpfiles = ['equipment_A.csv','equipment_B.csv','equipment_C.csv','equipment_D.csv']
