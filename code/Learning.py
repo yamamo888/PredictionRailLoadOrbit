@@ -40,7 +40,7 @@ class Arima():#自己回帰
 
         self.N = 10
         self.p = 10
-        self.q = 10
+        self.q = 12
         self.d = 1
 
         self.w_ar = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
@@ -52,38 +52,38 @@ class Arima():#自己回帰
         t = self.t[self.t['date'] == '2018-03-31']
         date_ar = []
         date_ma = []
-        z_ar1 = np.empty((0, self.N*t.shape[0]))
-        z_ma1 = np.empty((0, self.N*t.shape[0]))
+        z_ar1 = np.empty((0, (self.p-self.d)*t.shape[0]))
+        z_ma1 = np.empty((0, (self.q-self.d)*t.shape[0]))
         for i in range(self.N):
             z_ar0 = []
             z_ma0 = []
-            for j in range(self.p):
+            for j in range(self.p-self.d):
                 date_ar = np.append(date_ar, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 z_ar0 = np.append(z_ar0, self.t[self.t['date'] == date_ar[-1]]['hll'])
             z_ar0 = z_ar0[np.newaxis]
             z_ar1 = np.append(z_ar1, z_ar0,axis=0)
 
-            for k in range(self.q):
+            for k in range(self.q-self.d):
                 date_ma = np.append(date_ma, (t['date'][-1:] - datetime.timedelta(days=k+i+2)).astype(str))
                 z_ma0 = np.append(z_ma0, self.t[self.t['date'] == date_ma[-1]]['hll'])
             z_ma0 = z_ma0[np.newaxis]
-            z_ma1 = np.append(z_ma1, z_ar0,axis=0)
+            z_ma1 = np.append(z_ma1, z_ma0,axis=0)
             
         z_ar1 = np.append(z_ar1, np.ones([1,z_ar1.shape[1]]),axis=0)
         z_ma1 = np.append(z_ma1, np.ones([1,z_ma1.shape[1]]),axis=0)
 
         y = []
         date_y = []
-        for i in range(self.N):
+        for i in range(self.N-self.d):
             date_y = np.append(date_y, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
             y = np.append(y, self.t[self.t['date'] == date_y[-1]]['hll'])
         y = y[np.newaxis].T
-        pdb.set_trace()
 
         sigma_ar0 = np.matmul(z_ar1, z_ar1.T)
         sigma_ar1 = np.matmul(z_ar1, y)
         self.w_ar = np.matmul(sigma_ar0, sigma_ar1)
-
+        
+        pdb.set_trace()
         sigma_ma0 = np.matmul(z_ma1, z_ma1.T)
         sigma_ma1 = np.matmul(z_ma1, y)
         self.w_ma = np.matmul(sigma_ma0, sigma_ma1)
