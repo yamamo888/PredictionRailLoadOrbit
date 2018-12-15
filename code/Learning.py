@@ -28,7 +28,7 @@ import datetime
 
 import pdb
 
-class Ar():#自己回帰
+class Arima():#自己回帰
     def __init__(self,x,t):
         self.x = x
         self.t = t
@@ -38,35 +38,55 @@ class Ar():#自己回帰
 
         self.tNum = t.shape[0]
 
-        self.N = 50
-        self.p = 50
+        self.N = 10
+        self.p = 10
+        self.q = 10
+        self.d = 1
 
-        self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
+        self.w_ar = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
+        self.w_ma = np.random.normal(0.0, pow(100, -0.5), (self.q + 1, 1))
+
+        self.eps = np.array([np.random.normal(1,25) for _ in range(365)])
 
     def train(self):
         t = self.t[self.t['date'] == '2018-03-31']
-        date = []
-        z1 = np.empty((self.N*t.shape[0],0))
-        for i in range(self.p):
-            z0 = []
-            for j in range(self.N):
-                date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                z0 = np.append(z0, self.t[self.t['date'] == date[-1]]['hll'])
-            #pdb.set_trace()
-            z0 = z0[np.newaxis].T
-            z1 = np.append(z1, z0,axis=1)
-        z1 = np.append(z1, np.ones([z1.shape[0],1]),axis=1)
+        date_ar = []
+        date_ma = []
+        z_ar1 = np.empty((0, self.N*t.shape[0]))
+        z_ma1 = np.empty((0, self.N*t.shape[0]))
+        for i in range(self.N):
+            z_ar0 = []
+            z_ma0 = []
+            for j in range(self.p):
+                date_ar = np.append(date_ar, (t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                z_ar0 = np.append(z_ar0, self.t[self.t['date'] == date_ar[-1]]['hll'])
+            z_ar0 = z_ar0[np.newaxis]
+            z_ar1 = np.append(z_ar1, z_ar0,axis=0)
+
+            for k in range(self.q):
+                date_ma = np.append(date_ma, (t['date'][-1:] - datetime.timedelta(days=k+i+2)).astype(str))
+                z_ma0 = np.append(z_ma0, self.t[self.t['date'] == date_ma[-1]]['hll'])
+            z_ma0 = z_ma0[np.newaxis]
+            z_ma1 = np.append(z_ma1, z_ar0,axis=0)
+            
+        z_ar1 = np.append(z_ar1, np.ones([1,z_ar1.shape[1]]),axis=0)
+        z_ma1 = np.append(z_ma1, np.ones([1,z_ma1.shape[1]]),axis=0)
 
         y = []
+        date_y = []
         for i in range(self.N):
-            date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-            y = np.append(y, self.t[self.t['date'] == date[-1]]['hll'])
+            date_y = np.append(date_y, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+            y = np.append(y, self.t[self.t['date'] == date_y[-1]]['hll'])
         y = y[np.newaxis].T
+        pdb.set_trace()
 
-        sigma0 = np.matmul(z1.T, z1)
-        sigma1 = np.matmul(z1.T, y)
-        self.w = np.matmul(sigma0, sigma1)
-        #pdb.set_trace()
+        sigma_ar0 = np.matmul(z_ar1, z_ar1.T)
+        sigma_ar1 = np.matmul(z_ar1, y)
+        self.w_ar = np.matmul(sigma_ar0, sigma_ar1)
+
+        sigma_ma0 = np.matmul(z_ma1, z_ma1.T)
+        sigma_ma1 = np.matmul(z_ma1, y)
+        self.w_ma = np.matmul(sigma_ma0, sigma_ma1)
 
     def predict(self,t):
         #pdb.set_trace()
@@ -77,16 +97,13 @@ class Ar():#自己回帰
             y = np.append(y, self.t[self.t['date'] == date[-1]]['hll'])
         y = y.reshape([self.p,t.shape[0]])
 
-        #print("date :\n", date)
-        #print("y :\n", y)
-        #pdb.set_trace()
-
-        y = self.w[0] + np.matmul(self.w[1:].T, y)
+        y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + np.matmul(self.w_ma, self.eps[1:self.p]) + self.eps[0]
+        #y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + self.eps[0]
         return y
 
     def loss(self,tDate):
         t = np.array(tDate['hll'])[np.newaxis]
-        pdb.set_trace()
+        #pdb.set_trace()
         #t = t[t['date'] == '2018-03-31']
         num = pow(t - self.predict(tDate),2)
         loss = np.sum(num) / (t.shape[1])
@@ -137,11 +154,15 @@ if __name__ == "__main__":
     w_list = []
 
     for no in range(len(fileind)):
-        ar = Ar(mytrackData.train_xData[0],mytrackData.train_tData[0])
+        arima = Arima(mytrackData.train_xData[0],mytrackData.train_tData[0])
         # ar_list.append(ar)
-        ar.train()
-        w_list.append(ar.w)
+        arima.train()
+        w_list.append(arima.w_ar)
 
+    print(arima.w_ar.shape)
+    print(arima.w_ar)
+    print(arima.w_ma.shape)
+    print(arima.w_ma)
     f = open("w_list.binaryfile","wb")
     pickle.dump(w_list,f)
     f.close
