@@ -117,7 +117,7 @@ if __name__ == "__main__":
         pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
 
         for i in range(nite):
-            date = sDate + nite*aDay
+            date = sDate + i*aDay
             y.append(pre.predict(date))
 
     # pre.showY(range(nite),y)
