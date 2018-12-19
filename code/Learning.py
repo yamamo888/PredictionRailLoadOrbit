@@ -28,7 +28,17 @@ import datetime
 
 import pdb
 
-class Arima():#自己回帰
+#------------------------------------------------------------
+# ARIMAモデルでの自己回帰
+# self.N    : 使用する日数
+# self.p    : 遡る日数(ARモデル)
+# self.q    : 遡る日数(MAモデル)
+# self.d    : d次階差時系列
+# self.w_ar : ARモデルでのパラメータ(重み)
+# self.w_ma : MAモデルでのパラメータ(重み)
+# self.eps  : MAモデルで使用するホワイトノイズ
+#------------------------------------------------------------
+class Arima():
     def __init__(self,xData,tData):
         self.xData = xData
         self.tData = tData
@@ -39,7 +49,11 @@ class Arima():#自己回帰
         self.tNum = tData.shape[0]
 
         self.t = self.tData[self.tData['date'] == '2018-3-31']
-
+        self.k = np.empty([365, 3]).tolist()
+        #self.k = self.tData[self.tData['krage'] == 10000]
+        for i in range(int(self.tData['krage'][-1:])-10000):
+            self.k = self.tData[self.tData['krage']==10000+i]
+            pdb.set_trace()
         self.N = 10
         self.p = 10
         self.q = 12
@@ -51,9 +65,13 @@ class Arima():#自己回帰
         self.eps = np.array([np.random.normal(1,25) for _ in range(365*self.t.shape[0])])
         print(self.eps)
 
+    #------------------------------------------------------------
+    # ARIMAモデルの学習
+    # date_ar : 
+    #------------------------------------------------------------
     def train(self):
         date_ar = []
-        date_ma = []
+        #date_ma = []
         z_ar1 = np.empty(((self.N-self.d)*self.t.shape[0],0))
         z_ma1 = np.empty(((self.N-self.d)*self.t.shape[0],0))
         for i in range(self.p):
@@ -81,7 +99,6 @@ class Arima():#自己回帰
                 z_ar0 = np.append(z_ar0, self.tData[self.tData['date'] == date_ar[-1]]['hll'])
             z_ar0 = z_ar0[np.newaxis]
             z_ar1 = np.append(z_ar1, z_ar0,axis=0)
-
             for k in range(self.q-self.d):
                 z_ma0 = np.append(z_ma0, self.eps[(k+i+2)*self.t.shape[0]:(k+i+3)*self.t.shape[0]]) 
                 #pdb.set_trace()
@@ -108,7 +125,7 @@ class Arima():#自己回帰
         sigma_ar1 = np.matmul(z_ar1.T, y)
         self.w_ar = np.matmul(sigma_ar0, sigma_ar1)
         print(self.w_ar)
-        pdb.set_trace()
+        #pdb.set_trace()
 
         sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
         sigma_ma1 = np.matmul(z_ma1.T, e)
