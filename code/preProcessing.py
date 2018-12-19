@@ -11,7 +11,7 @@ import pdb
 #-------------------
 # pre_processingクラスの定義定義始まり
 class pre_processing:
-	dataPath = '../data' # データが格納させているフォルダ名
+	dataPath = 'data' # データが格納させているフォルダ名
 
 	#------------------------------------
 	# CSVファイルの読み込み
@@ -88,23 +88,24 @@ class pre_processing:
 	# 欠損値のインデックスを得る
 	def get_index(self, data):
 		# NaNのインデックスリスト
-		list_nan = []
-		list_del = [] #消去するNanのリスト
-		list_fill = [] #補完するNanのリスト
+		list_nan = np.array([])
+		list_del = np.array([]) #消去するNanのリスト
+		list_fill = np.array([]) #補完するNanのリスト
 
 		# 高低左のデータに対して処理
 		nan_mat = self.shape_matrix(data, "高低左")
 		#pdb.set_trace()
-		for i in range(data.shape[0]):
+		for i in range(nan_mat.shape[0]):
 			if(math.isnan(nan_mat[i][0]) == True):
-				list_nan.append(i)
+					#pdb.set_trace()
+					list_nan=np.append(list_nan,int(i))
 			elif(math.isnan(nan_mat[i][0]) == False):
 				if(len(list_nan) >= 10):
-					list_del.append(list_nan)
-					list_nan.clear()
+					list_del=np.append(list_del,list_nan)
+					list_nan=np.array([])
 				elif(0 < len(list_nan) < 10):
-					list_fill.append(list_nan)
-					list_nan.clear()
+					list_fill=np.append(list_fill,list_nan)
+					list_nan=np.array([])
 
 		return list_del, list_fill
 	#------------------------------------
@@ -113,11 +114,11 @@ class pre_processing:
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		newData = data
-		del, fill = get_index(data)
-
+		del_,fill = self.get_index(data)               
+		pdb.set_trace()
 		# 削除
-		for i in range(len(del)):
-			newData = np.delete(newData, del[i])
+		for i in range(len(del_)):
+			newData = np.delete(newData, del_[i])
 		"""まだできていない
 		# 補完
 		for j in range(len(fill)):
@@ -133,7 +134,7 @@ class pre_processing:
 		mat = self.missing_values(data)
 
 		# 目的変数は高低左
-		x = np.delete(mat, 0, axis=1)
+
 		t = mat[:,0]
 
 		return x, t
@@ -238,7 +239,7 @@ if __name__ == "__main__":
 
 	for no in ['A', 'B', 'C', 'D']:
 		# trainデータについて
-		xTrain[no], tTrain[no] = myData.get_train_data(no)
+		xTrain[no], tTrain[no] = myData.get_train_data(no,0)
 		print("【xTrain_{}】\n{}\n".format(no, xTrain[no]))
 		print("【tTrain_{}】\n{}\n".format(no, tTrain[no]))
 		"""うまくいかない
@@ -251,7 +252,7 @@ if __name__ == "__main__":
 		myData.file_output(fname, tTrain[no])"""
 
 		# testデータについて
-		xTest[no], tTest[no] = myData.get_test_data(no)
+		xTest[no], tTest[no] = myData.get_test_data(no,0)
 		print("【xTest_{}】\n{}\n".format(no, xTest[no]))
 		print("【tTest_{}】\n{}\n".format(no, tTest[no]))
 		"""うまくいかない
