@@ -28,15 +28,25 @@ import datetime
 
 import pdb
 
-
+#------------------------------------
+#self.x :
+#self.t : 高低左
+#self.w : 予測パラメータ
+#self.p : 予測のためにさかのぼる日数
+#self.N :
+#
+#
+#------------------------------------
 class prediction():
     def __init__(self,w,x,t):
-        self.x = x
-        self.t = t
-        self.w = w
-
         self.p = 50
         self.N = 50
+
+        self.x = x
+        self.t = t
+        # self.w = w
+        self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
+
 
     def predict(self,day):
         #pdb.set_trace()
@@ -78,21 +88,15 @@ class prediction():
 class trackData():
     def __init__(self):
         self.xTrain_list = []
-        # self.test_xData = []
         self.tTrain_list = []
-        # self.test_tData = []
         fileind = ['A','B','C','D']
         self.fNum = len(fileind)
         for no in range(self.fNum):
             self.load_file("w_list.binaryfile",self.w_list)
             fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
-            # fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
             fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
-            # fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
             self.load_file(fname_xTra,self.xTrain_list)
-            # self.load_file(fname_xTes,self.test_xData)
             self.load_file(fname_tTra,self.tTrain_list)
-            # self.load_file(fname_tTes,self.test_tData)
 
     def load_file(self,filename,data):
         f = open(filename,'rb')
@@ -114,7 +118,8 @@ if __name__ == "__main__":
     y = [] #予測した高低左を格納
 
     for j in range(fNum):
-        pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
+        # pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
+        pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j])
 
         for i in range(nite):
             date = sDate + nite*aDay
