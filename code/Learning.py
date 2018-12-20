@@ -73,6 +73,7 @@ class Arima():
         for i in range(int(self.tData['krage'][-1:]) - 10000):
             self.kDate = self.tData[self.tData['krage']==10000+i]
             self.k = self.kDate[self.kDate['date'] == '2018-03-31']
+            
             date_ar = []
             z_ar1 = np.empty(((self.N-self.d)*self.t.shape[0],0))
             z_ma1 = np.empty(((self.N-self.d)*self.t.shape[0],0))
