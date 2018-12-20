@@ -44,8 +44,8 @@ class prediction():
         self.x = x
         self.t = t
 
-        sDate = t.head(1)['date']
-        eDate = t.tail(1)['date']
+        sDate = t.head(1)['date'].iat[0,0]
+        eDate = t.tail(1)['date'].iat[0,0]
 
         self.days = sDate - eDate + dt.timedelta(days=1)
         self.krage_length = int(self.t.shape[0]/self.days) #キロ程の総数
@@ -119,14 +119,14 @@ if __name__ == "__main__":
     sDate = dt.date(2018,4,1)
     eDate = dt.date(2018,6,30)
 
-    nite = (eDate-sData).days #予測する日数
+    nite = (eDate-sDate).days #予測する日数
 
     fNum = myData.fNum #ファイルの数（A~Dの４つ）
     y = [] #予測した高低左を格納
 
     for j in range(fNum):
-        # pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j],days[j])
-        pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j],days[j]) #動作確認用
+        # pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
+        pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
 
         for i in range(nite):
             date = sDate + i*aDay
