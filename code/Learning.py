@@ -25,6 +25,7 @@ mpl.use('Agg')
 import matplotlib.pylab as plt
 
 import datetime
+import time
 
 import pdb
 
@@ -50,10 +51,6 @@ class Arima():
 
         self.t = self.tData[self.tData['date'] == '2018-3-31']
         self.kDate = np.empty([365, 3]).tolist()
-        #self.k = self.tData[self.tData['krage'] == 10000]
-        for i in range(int(self.tData['krage'][-1:])-10000):
-            self.k = self.tData[self.tData['krage']==10000+i]
-            pdb.set_trace()
         self.N = 10
         self.p = 10
         self.q = 12
@@ -62,35 +59,34 @@ class Arima():
         self.w_ar = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
         self.w_ma = np.random.normal(0.0, pow(100, -0.5), (self.q + 1, 1))
 
-        self.eps = np.array([np.random.normal(1,25) for _ in range(365*self.t.shape[0])])
-        print(self.eps)
+        self.eps = np.array([np.random.normal(1,25) for _ in range(365)])
 
     #------------------------------------------------------------
     # ARIMAモデルの学習
-    # date_ar : 
+    # date_ar :
+    # selfi.kDate['hll'][self.k.index[0]] 
     #------------------------------------------------------------
     def train(self):
-        for i in range(int(self.tData['krage'][-1:]) - 10000):
-            self.kDate = self.tData[self.tData['krage']==10000+i]
-            self.k = self.kDate[self.kDate['date'] == '2018-03-31']
-            
+        start = time.time()
+        for k in range(int(self.tData['krage'][-1:]) - 10000):
+            self.kDate = self.tData[self.tData['krage']==10000+k]
+            #self.k = self.kDate[self.kDate['date'] == '2018-03-31']
+
             date_ar = []
-            z_ar1 = np.empty(((self.N-self.d)*self.t.shape[0],0))
-            z_ma1 = np.empty(((self.N-self.d)*self.t.shape[0],0))
+            z_ar1 = np.empty(((self.N-self.d),0))
+            z_ma1 = np.empty(((self.N-self.d),0))
             for i in range(self.p):
                 z_ar0 = []
                 for j in range(self.N-self.d):
-                    date_ar = np.append(date_ar, (self.t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                    z_ar0 = np.append(z_ar0, self.tData[self.tData['date'] == date_ar[-1]]['hll'])
+                    date_ar = np.append(date_ar, (self.kDate['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                    z_ar0 = np.append(z_ar0, self.kDate[self.kDate['date'] == date_ar[-1]]['hll'])
                 z_ar0 = z_ar0[np.newaxis].T
                 z_ar1 = np.append(z_ar1, z_ar0,axis=1)
 
             for i in range(self.q):
                 z_ma0 = []
                 for j in range(self.N-self.d):
-                    z_ma0 = np.append(z_ma0, self.eps[(j+i+2)*self.t.shape[0]:(j+i+3)*self.t.shape[0]]) 
-                    #date_ma = np.append(date_ma, (self.t['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                    #z_ma0 = np.append(z_ma0, self.tData[self.tData['date'] == date_ar[-1]]['hll'])
+                    z_ma0 = np.append(z_ma0, self.eps[(j+i+2):(j+i+3)]) 
                 z_ma0 = z_ma0[np.newaxis].T
                 z_ma1 = np.append(z_ma1, z_ma0,axis=1)
                 
@@ -101,22 +97,26 @@ class Arima():
             date_y = []
             e = []
             for i in range(self.N-self.d):
-                date_y = np.append(date_y, (self.t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-                y = np.append(y, self.tData[self.tData['date'] == date_y[-1]]['hll'])
-                e = np.append(e, self.eps[i*self.t.shape[0]:(i+1)*self.t.shape[0]])
+                date_y = np.append(date_y, (self.kDate['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                y = np.append(y, self.kDate[self.kDate['date'] == date_y[-1]]['hll'])
+                e = np.append(e, self.eps[i:(i+1)])
             y = y[np.newaxis].T
             e = e[np.newaxis].T
-
+            
             sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
             sigma_ar1 = np.matmul(z_ar1.T, y)
             self.w_ar = np.matmul(sigma_ar0, sigma_ar1)
+            print('w_ar :', k)
             print(self.w_ar)
-            #pdb.set_trace()
 
             sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
             sigma_ma1 = np.matmul(z_ma1.T, e)
+            ipdb.set_trace()
             self.w_ma = np.matmul(sigma_ma0, sigma_ma1)
-        print(self.w_ma)
+            print('w_ma :', k)
+            print(self.w_ma)
+        end_time = time.time() - start
+        print("time : {0}".format(end_time) + "[sec]") 
 
     def predict(self,t):
         #pdb.set_trace()
