@@ -114,7 +114,7 @@ class pre_processing:
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		newData = data
-		del_,fill = self.get_index(data)               
+		del_,fill = self.get_index(data)
 		#pdb.set_trace()
 		# 削除
 		for i in range(len(del_)):
@@ -134,7 +134,7 @@ class pre_processing:
 		mat = self.missing_values(data)
 
 		# 目的変数は高低左
-
+		
 		t = mat[:,0]
 
 		return x, t
@@ -234,6 +234,15 @@ if __name__ == "__main__":
 	tTrain = {}
 	xTest = {}
 	tTest = {}
+	mat = {}
+
+
+	xTrain_e = {}
+	tTrain_e = {}
+	xTest_e = {}
+	tTest_e = {}
+	mat_e = {}
+
 
 	myData = pre_processing()
 
@@ -263,11 +272,15 @@ if __name__ == "__main__":
 		# 目的変数
 		fname = "tTest_{}.txt".format(no)
 		myData.file_output(fname, tTest[no])"""
-	
+
 	for no in ['A','B','C','D']:
 		#trainデータについて
-		xTrain_e[no],tTrain[no], mat[no] = myData.get_train_data(no,1)
+		xTrain_e[no],tTrain[no], mat_e[no] = myData.get_train_data(no,1)
 		print("【xTrain_e{}】\n{}\n".format(no, xTrain[no]))
 		print("【tTrain_e{}】\n{}\n".format(no, xTrain[no]))
+
+		xTest_e[no],tTrain_e[no],mat_e[no] = myData.get_test_data(no,1)
+		print("【xTest_e{}】\n{}\n".format(no, xTest_e[no]))
+		print("【tTest_e{}】\n{}\n".format(no, xTest_e[no]))
 #メインの終わり
 #-------------------
