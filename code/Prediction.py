@@ -33,40 +33,47 @@ import pdb
 #self.t : 高低左
 #self.w : 予測パラメータ
 #self.p : 予測のためにさかのぼる日数
-#self.N :
-#
+#self.days : 入力データの総日数
+#self.krage_length : 入力データの総キロ数
 #
 #------------------------------------
 class prediction():
     def __init__(self,w,x,t):
         self.p = 50
         self.N = 50
-
         self.x = x
         self.t = t
+
+        sDate = t.head(1)['date']
+        eDate = t.tail(1)['date']
+
+        self.days = sDate - eDate + dt.timedelta(days=1)
+        self.krage_length = int(self.t.shape[0]/self.days) #キロ程の総数
         # self.w = w
-        self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
+        self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
 
     def predict(self,day):
         #pdb.set_trace()
-        xNum = self.t.shape[0]
         aDay = dt.timedelta(days=1)
         y = []
         tmp = []
         for i in range(self.p):
-            date = day - aDay * i
+            date = day - aDay * (i+1)
             y = np.append(y,self.t[self.t['date'] == date]['hll'])
 
-        y = y.reshape([self.p,xNum])
-        #     date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-        #     y = np.append(y, self.t[self.t['date'] == date[-1]]['hll'])
-        #     y = y.reshape([self.p,t.shape[0]])
-        #print("date :\n", date)
-        #print("y :\n", y)
-        #pdb.set_trace()
+        y = y.reshape([self.p,self.krage_length])
+
         y = self.w[0] + np.matmul(self.w[1:].T, y)
-        df = pd.DataFrame([[day,y]],index=[xNum],columns=['date','hll'])
+
+        df = pd.DataFrame(y,columns=['hll'])
+
+        #'krage','date'をdfの末尾に追加
+        df['krage'] = t['krage'].value
+        df['date'] = day
+
+        df.ix[:,['date','krage','hll']] #'date','krage','hll'の順番に並び替え
+
         self.t = pd.concat(self.t,df)
         return y
 
@@ -92,7 +99,7 @@ class trackData():
         fileind = ['A','B','C','D']
         self.fNum = len(fileind)
         for no in range(self.fNum):
-            self.load_file("w_list.binaryfile",self.w_list)
+            #self.load_file("w_list.binaryfile",self.w_list)
             fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
             fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
             self.load_file(fname_xTra,self.xTrain_list)
@@ -118,8 +125,8 @@ if __name__ == "__main__":
     y = [] #予測した高低左を格納
 
     for j in range(fNum):
-        # pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
-        pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j])
+        # pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j],days[j])
+        pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j],days[j]) #動作確認用
 
         for i in range(nite):
             date = sDate + i*aDay
