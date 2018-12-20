@@ -115,7 +115,7 @@ class pre_processing:
 	def missing_values(self, data):
 		newData = data
 		del_,fill = self.get_index(data)               
-		pdb.set_trace()
+		#pdb.set_trace()
 		# 削除
 		for i in range(len(del_)):
 			newData = np.delete(newData, del_[i])
@@ -166,7 +166,7 @@ class pre_processing:
 			trainInd[no] = int(len(self.track[no]) * self.trainPer)
 		elif(flag == 1):
 			x[no], t[no] = self.divide_equipment(self.equipment[no])
-			mat[no] = self.equipment[no].groupby(["date", "キロ程"]).max()["橋りょう"].unstack().notnull().values
+			mat[no] = self.track[no].groupby(["date", "キロ程"]).max()["高低左"].unstack().notnull().values
 			trainInd[no] = int(len(self.equipment[no]) * self.trainPer)
 		xTrain[no] = x[no][:trainInd[no]]
 		tTrain[no] = t[no][:trainInd[no]]
@@ -192,7 +192,7 @@ class pre_processing:
 			trainInd[no] = int(len(self.track[no]) * self.trainPer)
 		elif(flag == 1):
 			x[no], t[no] = self.divide_equipment(self.equipment[no])
-			mat[no] = self.track[no].groupby(["date", "キロ程"]).max()["橋りょう"].unstack().notnull().values
+			mat[no] = self.track[no].groupby(["date", "キロ程"]).max()["高低左"].unstack().notnull().values
 			trainInd[no] = int(len(self.equipment[no]) * self.trainPer)
 		#trainInd[no] = int(len(self.track[no])*self.trainPer)
 		xTest[no] = x[no][trainInd[no]:]
@@ -239,7 +239,7 @@ if __name__ == "__main__":
 
 	for no in ['A', 'B', 'C', 'D']:
 		# trainデータについて
-		xTrain[no], tTrain[no] = myData.get_train_data(no,0)
+		xTrain[no], tTrain[no], mat[no]= myData.get_train_data(no,0)
 		print("【xTrain_{}】\n{}\n".format(no, xTrain[no]))
 		print("【tTrain_{}】\n{}\n".format(no, tTrain[no]))
 		"""うまくいかない
@@ -252,7 +252,7 @@ if __name__ == "__main__":
 		myData.file_output(fname, tTrain[no])"""
 
 		# testデータについて
-		xTest[no], tTest[no] = myData.get_test_data(no,0)
+		xTest[no], tTest[no], mat[no] = myData.get_test_data(no,0)
 		print("【xTest_{}】\n{}\n".format(no, xTest[no]))
 		print("【tTest_{}】\n{}\n".format(no, tTest[no]))
 		"""うまくいかない
@@ -263,6 +263,11 @@ if __name__ == "__main__":
 		# 目的変数
 		fname = "tTest_{}.txt".format(no)
 		myData.file_output(fname, tTest[no])"""
-
+	
+	for no in ['A','B','C','D']:
+		#trainデータについて
+		xTrain_e[no],tTrain[no], mat[no] = myData.get_train_data(no,1)
+		print("【xTrain_e{}】\n{}\n".format(no, xTrain[no]))
+		print("【tTrain_e{}】\n{}\n".format(no, xTrain[no]))
 #メインの終わり
 #-------------------
