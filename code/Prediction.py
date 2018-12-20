@@ -44,11 +44,12 @@ class prediction():
         self.x = x
         self.t = t
 
-        sDate = t.head(1)['date'].iat[0,0]
-        eDate = t.tail(1)['date'].iat[0,0]
+        sdate = t.head(1)['date'].iat[0]
+        edate = t.tail(1)['date'].iat[0]
 
-        self.days = sDate - eDate + dt.timedelta(days=1)
-        self.krage_length = int(self.t.shape[0]/self.days) #キロ程の総数
+        self.xNum = self.t.shape[0]
+        self.days = (edate - sdate + dt.timedelta(days=1)).days
+        self.krage_length = int(self.xNum/self.days) #キロ程の総数
         # self.w = w
         self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
@@ -68,14 +69,13 @@ class prediction():
 
         df = pd.DataFrame(y,columns=['hll'])
 
-        #'krage','date'をdfの末尾に追加
-        df['krage'] = t['krage'].value
+        #'date'をdfの末尾に追加
         df['date'] = day
 
-        df.ix[:,['date','krage','hll']] #'date','krage','hll'の順番に並び替え
+        df = df.ix[:,['date','hll']] #'date','hll'の順番に並び替え
 
-        self.t = pd.concat(self.t,df)
-        return y
+        self.t = pd.concat([self.t,df])
+        return self.t
 
     def loss(self,tDate):
         t = np.array(tDate['hll'])[np.newaxis]
@@ -96,8 +96,8 @@ class trackData():
     def __init__(self):
         self.xTrain_list = []
         self.tTrain_list = []
-        fileind = ['A','B','C','D']
-        self.fNum = len(fileind)
+        self.fileind = ['A','B','C','D']
+        self.fNum = len(self.fileind)
         for no in range(self.fNum):
             #self.load_file("w_list.binaryfile",self.w_list)
             fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
@@ -116,25 +116,28 @@ if __name__ == "__main__":
     myData=trackData() #Trainとwのリストを読み込む
 
     aDay = dt.timedelta(days=1)
-    sDate = dt.date(2018,4,1)
-    eDate = dt.date(2018,6,30)
+    sDate = dt.datetime(2018,4,1,00,00,00)
+    eDate = dt.datetime(2018,6,30,00,00,00)
 
     nite = (eDate-sDate).days #予測する日数
 
     fNum = myData.fNum #ファイルの数（A~Dの４つ）
     y = [] #予測した高低左を格納
-
+    xNums = []
     for j in range(fNum):
         # pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
         pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
 
         for i in range(nite):
             date = sDate + i*aDay
-            y.append(pre.predict(date))
+            pre.predict(date)
 
+        y.append(pre.t)
+        xNums.append(pre.xNum)
     # pre.showY(range(nite),y)
 
-    output = pd.DataFrame([y],columns="高低左")
-    f = open("output.csv","w")
-    pickle.dump(f,output)
-    f.close
+    for i in range(myData.fNum):
+        output = y[i].iloc[xNums[i]:,['date','hll']]
+        f = open("output_{}.csv".format(myData.fileind[i]),"w")
+        pickle.dump(f,y[i])
+        f.close
