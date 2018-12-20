@@ -114,8 +114,8 @@ class pre_processing:
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		newData = data
-		del_,fill = self.get_index(data)               
-		pdb.set_trace()
+		del_,fill = self.get_index(data)
+		#pdb.set_trace()
 		# 削除
 		for i in range(len(del_)):
 			newData = np.delete(newData, del_[i])
@@ -134,7 +134,7 @@ class pre_processing:
 		mat = self.missing_values(data)
 
 		# 目的変数は高低左
-
+		x = np.delete(mat,0,axis=1)		
 		t = mat[:,0]
 
 		return x, t
@@ -162,17 +162,14 @@ class pre_processing:
 
 		if(flag == 0):
 			x[no], t[no] = self.divide_track(self.track[no])
-			mat[no] = self.track[no].groupby(["date", "キロ程"]).max()["高低左"].unstack().notnull().values
 			trainInd[no] = int(len(self.track[no]) * self.trainPer)
 		elif(flag == 1):
 			x[no], t[no] = self.divide_equipment(self.equipment[no])
-			mat[no] = self.equipment[no].groupby(["date", "キロ程"]).max()["橋りょう"].unstack().notnull().values
 			trainInd[no] = int(len(self.equipment[no]) * self.trainPer)
 		xTrain[no] = x[no][:trainInd[no]]
 		tTrain[no] = t[no][:trainInd[no]]
-		mat_train[no] = mat[no][:trainInd[no]]
 
-		return xTrain[no], tTrain[no], mat_train[no]
+		return xTrain[no], tTrain[no]
 	#------------------------------------
 
 	#------------------------------------
@@ -192,14 +189,13 @@ class pre_processing:
 			trainInd[no] = int(len(self.track[no]) * self.trainPer)
 		elif(flag == 1):
 			x[no], t[no] = self.divide_equipment(self.equipment[no])
-			mat[no] = self.track[no].groupby(["date", "キロ程"]).max()["橋りょう"].unstack().notnull().values
 			trainInd[no] = int(len(self.equipment[no]) * self.trainPer)
 		#trainInd[no] = int(len(self.track[no])*self.trainPer)
 		xTest[no] = x[no][trainInd[no]:]
 		tTest[no] = t[no][trainInd[no]:]
-		mat_test[no] = mat[no][trainInd[no]:]
+		
 
-		return xTest[no], tTest[no], mat_test[no]
+		return xTest[no], tTest[no]
 	#------------------------------------
 
 	#------------------------------------
@@ -235,11 +231,18 @@ if __name__ == "__main__":
 	xTest = {}
 	tTest = {}
 
+
+	xTrain_e = {}
+	tTrain_e = {}
+	xTest_e = {}
+	tTest_e = {}
+
+
 	myData = pre_processing()
 
 	for no in ['A', 'B', 'C', 'D']:
 		# trainデータについて
-		xTrain[no], tTrain[no] = myData.get_train_data(no,0)
+		xTrain[no], tTrain[no]= myData.get_train_data(no,0)
 		print("【xTrain_{}】\n{}\n".format(no, xTrain[no]))
 		print("【tTrain_{}】\n{}\n".format(no, tTrain[no]))
 		"""うまくいかない
@@ -264,5 +267,14 @@ if __name__ == "__main__":
 		fname = "tTest_{}.txt".format(no)
 		myData.file_output(fname, tTest[no])"""
 
+	for no in ['A','B','C','D']:
+		#trainデータについて
+		xTrain_e[no],tTrain[no] = myData.get_train_data(no,1)
+		print("【xTrain_e{}】\n{}\n".format(no, xTrain[no]))
+		print("【tTrain_e{}】\n{}\n".format(no, xTrain[no]))
+
+		xTest_e[no],tTrain_e[no] = myData.get_test_data(no,1)
+		print("【xTest_e{}】\n{}\n".format(no, xTest_e[no]))
+		print("【tTest_e{}】\n{}\n".format(no, xTest_e[no]))
 #メインの終わり
 #-------------------
