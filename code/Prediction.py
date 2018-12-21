@@ -67,7 +67,7 @@ class prediction():
 
         y = self.w[0] + np.matmul(self.w[1:].T, y)
 
-        df = pd.DataFrame(y,columns=['hll'])
+        df = pd.DataFrame(y.T,columns=['hll'])
 
         #'date'をdfの末尾に追加
         df['date'] = day
@@ -100,8 +100,8 @@ class trackData():
         self.fNum = len(self.fileind)
         for no in range(self.fNum):
             #self.load_file("w_list.binaryfile",self.w_list)
-            fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
-            fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
+            fname_xTra = "xTrain_{}.binaryfile".format(self.fileind[no])
+            fname_tTra = "tTrain_{}.binaryfile".format(self.fileind[no])
             self.load_file(fname_xTra,self.xTrain_list)
             self.load_file(fname_tTra,self.tTrain_list)
 
@@ -119,11 +119,11 @@ if __name__ == "__main__":
     sDate = dt.datetime(2018,4,1,00,00,00)
     eDate = dt.datetime(2018,6,30,00,00,00)
 
-    nite = (eDate-sDate).days #予測する日数
+    nite = (eDate-sDate + aDay).days #予測する日数(int)
 
     fNum = myData.fNum #ファイルの数（A~Dの４つ）
-    y = [] #予測した高低左を格納
-    xNums = []
+    y = [] #予測した高低左(A~Dの４つ)を格納
+
     for j in range(fNum):
         # pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
         pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
@@ -132,12 +132,12 @@ if __name__ == "__main__":
             date = sDate + i*aDay
             pre.predict(date)
 
-        y.append(pre.t)
-        xNums.append(pre.xNum)
+        out = pre.t.iloc[pre.xNum:]
+        y.append(out)
     # pre.showY(range(nite),y)
 
     for i in range(myData.fNum):
-        output = y[i].iloc[xNums[i]:,['date','hll']]
+        output = y[i]
         f = open("output_{}.csv".format(myData.fileind[i]),"w")
         pickle.dump(f,y[i])
         f.close
