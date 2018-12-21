@@ -32,7 +32,6 @@ class pre_processing:
 
 	#------------------------------------
 	# 値があるかないかの行列の形に変換
-	# ガウシアンカーネルと同じshapeで、中心に欠損値がある行列を取得したい
 	def shape_matrix(self, data, target):
 		return data.groupby(["date", "キロ程"]).max()[target].unstack().values
 	#------------------------------------
@@ -59,72 +58,90 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
-	# 欠損データを補完する
-	# 平均からばらつきを考慮して補完する
-	def ave_complement(self, data, column):
-		ave = data[column].mean() #平均値
-		std = data[column].std() #標準偏差
-		cnt_null = data[column].isnull().sum() #欠損データの総数
-
-		# 正規分布に従うとし標準偏差の範囲内でランダムに数字を作る
-		rnd = np.random.randint(ave - std, ave + std, size=cnt_null)
-
-		data[column][np.isnan(data[column])] = rnd
-	#------------------------------------
-
-	#------------------------------------
-	# 欠損データを補完する
+	# 欠損値を予測する
 	# ガウシアンカーネルと協調フィルタリングの考え方を用いる
-	"""まだできていない
-	def gauss_complement(self, data, index):
+	# 未実装
+	def gauss_complement(self, data, target, index):
+		newData = self.shape_matrix(data, target)
+		row, col = index
 		# ガウシアンカーネルを作成
 		gauss = self.gaussian_kernel(9)
-		value =
 
-		return value"""
+		# ガウシアンカーネルと同じshapeで中心が欠損値の行列を作成
+		# まずは全要素Nanにする
+		mat = np.zeros_like(gauss)
+		mat[:,:] = np.nan
+		# newDataから値をもってくる
+		mat = newData[row][col]
+
+		# 欠損値の予測
+		value = np.nansum(gauss * mat)
+
+		return value
 	#------------------------------------
 
 	#------------------------------------
-	# 欠損値のインデックスを得る
-	def get_index(self, data):
+	# 削除する欠損値のインデックスを取得する
+	def get_del_index(self, data):
 		# NaNのインデックスリスト
-		list_nan = np.array([])
-		list_del = np.array([]) #消去するNanのリスト
-		list_fill = np.array([]) #補完するNanのリスト
+		list_nan = np.array([], dtype=int)
+		# 削除するNanのリスト
+		list_del = np.array([], dtype=int)
 
-		# 高低左のデータに対して処理
+		# 高低左のデータを基準とする
 		nan_mat = self.shape_matrix(data, "高低左")
-		#pdb.set_trace()
-		for i in range(nan_mat.shape[0]):
-			if(math.isnan(nan_mat[i][0]) == True):
-					#pdb.set_trace()
-					list_nan=np.append(list_nan,int(i))
-			elif(math.isnan(nan_mat[i][0]) == False):
-				if(len(list_nan) >= 10):
-					list_del=np.append(list_del,list_nan)
-					list_nan=np.array([])
-				elif(0 < len(list_nan) < 10):
-					list_fill=np.append(list_fill,list_nan)
-					list_nan=np.array([])
+		for row in range(nan_mat.shape[0]):
+			if(math.isnan(nan_mat[row][0]) == True):
+					list_nan　=　np.append(list_nan,　i)
+			elif(math.isnan(nan_mat[row][0]) == False):
+				if(list_nan.shape[0] >= 10):
+					list_del = np.append(list_del, list_nan)
+					list_nan = np.array([], dtype=int)
+				else:
+					list_nan = np.array([], dtype=int)
 
-		return list_del, list_fill
+		return list_del
+	#------------------------------------
+
+	#------------------------------------
+	# 補完する欠損値のインデックスを取得する
+	# 引数であるdataは不要なデータを削除済みのデータセットであることが理想
+	def get_fill_index(self, data):
+		# NaNのインデックスリスト
+		list_nan = np.array([], dtype=int)
+		# 補完するNanのリスト
+		list_fill = np.zeros((1, 2), dtype=int)
+
+		# 高低左のデータを基準とする
+		nan_mat = self.shape_matrix(data, "高低左")
+		# 同じキロ程でみていく
+		for col in range(nan_mat.shape[1]):
+			for row in range(nan_mat.shape[0]):
+				if(math.isnan(nan_mat[row][col]) == True):
+					list_nan = np.append(list_nan, [[row, col]], axis=0)
+				elif(math.isnan(nan_mat[row][col]) == False):
+					if(0 < list_nan.shape[0] < 10):
+						list_fill = np.append(list_fill, list_nan, axis=0)
+					else:
+						list_nan = np.zeros((1, 2), dtype=int)
+
+		return list_fill[1:,:]
 	#------------------------------------
 
 	#------------------------------------
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		newData = data
-		del_,fill = self.get_index(data)
-		#pdb.set_trace()
+		delete,fill = self.get_index(data)
 		# 削除
-		for i in range(len(del_)):
-			newData = np.delete(newData, del_[i])
-		"""まだできていない
+		for i in range(len(delete)):
+			newData = np.delete(newData, delete[i])
+		#↓は未実装
 		# 補完
-		for j in range(len(fill)):
-			newData = self.gauss_complement(newData, fill[i])
-		"""
-		return newData
+		#for j in range(len(fill)):
+			#newData = self.gauss_complement(newData, fill[i])
+
+		#return newData
 	#------------------------------------
 
 	#------------------------------------
@@ -134,7 +151,7 @@ class pre_processing:
 		mat = self.missing_values(data)
 
 		# 目的変数は高低左
-		x = np.delete(mat,0,axis=1)		
+		x = np.delete(mat, 0, axis=0)
 		t = mat[:,0]
 
 		return x, t
@@ -193,7 +210,7 @@ class pre_processing:
 		#trainInd[no] = int(len(self.track[no])*self.trainPer)
 		xTest[no] = x[no][trainInd[no]:]
 		tTest[no] = t[no][trainInd[no]:]
-		
+
 
 		return xTest[no], tTest[no]
 	#------------------------------------
@@ -231,18 +248,16 @@ if __name__ == "__main__":
 	xTest = {}
 	tTest = {}
 
-
 	xTrain_e = {}
 	tTrain_e = {}
 	xTest_e = {}
 	tTest_e = {}
 
-
 	myData = pre_processing()
 
 	for no in ['A', 'B', 'C', 'D']:
 		# trainデータについて
-		xTrain[no], tTrain[no]= myData.get_train_data(no,0)
+		xTrain[no], tTrain[no]= myData.get_train_data(no, 0)
 		print("【xTrain_{}】\n{}\n".format(no, xTrain[no]))
 		print("【tTrain_{}】\n{}\n".format(no, tTrain[no]))
 		"""うまくいかない
@@ -255,7 +270,7 @@ if __name__ == "__main__":
 		myData.file_output(fname, tTrain[no])"""
 
 		# testデータについて
-		xTest[no], tTest[no] = myData.get_test_data(no,0)
+		xTest[no], tTest[no] = myData.get_test_data(no, 0)
 		print("【xTest_{}】\n{}\n".format(no, xTest[no]))
 		print("【tTest_{}】\n{}\n".format(no, tTest[no]))
 		"""うまくいかない
@@ -269,11 +284,11 @@ if __name__ == "__main__":
 
 	for no in ['A','B','C','D']:
 		#trainデータについて
-		xTrain_e[no],tTrain[no] = myData.get_train_data(no,1)
+		xTrain_e[no],tTrain[no] = myData.get_train_data(no, 1)
 		print("【xTrain_e{}】\n{}\n".format(no, xTrain[no]))
 		print("【tTrain_e{}】\n{}\n".format(no, xTrain[no]))
 
-		xTest_e[no],tTrain_e[no] = myData.get_test_data(no,1)
+		xTest_e[no],tTrain_e[no] = myData.get_test_data(no, 1)
 		print("【xTest_e{}】\n{}\n".format(no, xTest_e[no]))
 		print("【tTest_e{}】\n{}\n".format(no, xTest_e[no]))
 #メインの終わり
