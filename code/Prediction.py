@@ -39,7 +39,7 @@ import pdb
 #------------------------------------
 class prediction():
     def __init__(self,w,x,t):
-        self.p = 50
+        self.p = 10
         self.N = 50
         self.x = x
         self.t = t
@@ -50,8 +50,8 @@ class prediction():
         self.xNum = self.t.shape[0]
         self.days = (edate - sdate + dt.timedelta(days=1)).days
         self.krage_length = int(self.xNum/self.days) #キロ程の総数
-        # self.w = w
-        self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
+        self.w = w
+        # self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
 
     def predict(self,day):
@@ -99,7 +99,7 @@ class trackData():
         self.fileind = ['A','B','C','D']
         self.fNum = len(self.fileind)
         for no in range(self.fNum):
-            #self.load_file("w_list.binaryfile",self.w_list)
+            self.load_file("w_list.binaryfile",self.w_list)
             fname_xTra = "xTrain_{}.binaryfile".format(self.fileind[no])
             fname_tTra = "tTrain_{}.binaryfile".format(self.fileind[no])
             self.load_file(fname_xTra,self.xTrain_list)
@@ -125,8 +125,8 @@ if __name__ == "__main__":
     y = [] #予測した高低左(A~Dの４つ)を格納
 
     for j in range(fNum):
-        # pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
-        pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
+        pre = prediction(myData.w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
+        # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
 
         for i in range(nite):
             date = sDate + i*aDay
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     # pre.showY(range(nite),y)
 
     for i in range(myData.fNum):
-        output = y[i]
-        f = open("output_{}.csv".format(myData.fileind[i]),"w")
-        pickle.dump(f,y[i])
+        fname = "output_{}.csv".format(myData.fileind[i])
+        f = open(fname,"w")
+        y[i].to_csv(fname)
         f.close
