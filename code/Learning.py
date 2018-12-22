@@ -68,20 +68,28 @@ class Arima():
     def AR(self,y,k):
         start = time.time()
         date_ar = []
-        z_ar1 = np.empty(((self.N-self.d),0))
+        #z_ar1 = np.empty(((self.N-self.d),0))
+        z_ar1 = []
         for i in range(self.p):
             z_ar0 = []
             for j in range(self.N-self.d):
-                date_ar = np.append(date_ar, (self.kDate['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                z_ar0 = np.append(z_ar0, self.kDate[self.kDate['date'] == date_ar[-1]]['hll'])
-            z_ar0 = z_ar0[np.newaxis].T
-            z_ar1 = np.append(z_ar1, z_ar0,axis=1)
+                date_ar = np.array((self.kDate['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                #z_ar0 = np.append(z_ar0, self.kDate[self.kDate['date'] == date_ar[-1]]['hll'])
+                z_ar0.append(float(self.kDate[self.kDate['date'] == date_ar[-1]]['hll']))
+            #z_ar0 = np.array(z_ar0)[np.newaxis].T
+            #z_ar1 = np.append(z_ar1, z_ar0,axis=1)
+            z_ar1.append(z_ar0)
+            #pdb.set_trace()
+        #pdb.set_trace()
+        z_ar1 = np.array(z_ar1).T
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
+        
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
         sigma_ar1 = np.matmul(z_ar1.T, y) 
         w_ar_buf = np.matmul(sigma_ar0, sigma_ar1)
         self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
-        #self.w_ar.append(np.matmul(sigma_ar0, sigma_ar1))
+        #self.w_ar.append(w_ar_buf)
+        #self.w_ar = (np.array(self.w_ar)[:,:,0]).tolist()
         #pdb.set_trace()
         end_time = time.time() - start
         print("time : {0}".format(end_time) + "[sec]")  
@@ -125,7 +133,8 @@ class Arima():
             date_y = []
             e = []
             for i in range(self.N-self.d):
-                date_y = np.append(date_y, (self.kDate['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                #date_y = np.append(date_y, (self.kDate['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                date_y = np.array((self.kDate['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 y = np.append(y, self.kDate[self.kDate['date'] == date_y[-1]]['hll'])
                 e = np.append(e, self.eps[i:(i+1)])
             y = y[np.newaxis].T
@@ -213,7 +222,7 @@ if __name__ == "__main__":
     for no in range(len(fileind)):
         arima = Arima(mytrackData.train_xData[0],mytrackData.train_tData[0])
         # ar_list.append(ar)
-        arima.multi_train()
+        arima.train()
         w_list.append(arima.w_ar)
 
     f = open("w_list.binaryfile","wb")
