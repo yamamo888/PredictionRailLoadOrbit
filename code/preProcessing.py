@@ -11,7 +11,7 @@ import pdb
 #-------------------
 # pre_processingクラスの定義定義始まり
 class pre_processing:
-	dataPath = 'data' # データが格納させているフォルダ名
+	dataPath = '../data' # データが格納させているフォルダ名
 
 	#------------------------------------
 	# CSVファイルの読み込み
@@ -92,7 +92,7 @@ class pre_processing:
 		nan_mat = self.shape_matrix(data, "高低左")
 		for row in range(nan_mat.shape[0]):
 			if(math.isnan(nan_mat[row][0]) == True):
-					list_nan　=　np.append(list_nan,　i)
+				list_nan = np.append(list_nan,row)
 			elif(math.isnan(nan_mat[row][0]) == False):
 				if(list_nan.shape[0] >= 10):
 					list_del = np.append(list_del, list_nan)
@@ -132,7 +132,16 @@ class pre_processing:
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		newData = data
-		delete,fill = self.get_index(data)
+		
+		delete = self.get_del_index(data)
+		
+		
+		##-----------------------------
+		##--------------追加-----------
+		reshaped_data = self.data_shape(data)
+		##-----------------------------
+		##-----------------------------
+
 		# 削除
 		for i in range(len(delete)):
 			newData = np.delete(newData, delete[i])
@@ -143,6 +152,21 @@ class pre_processing:
 
 		#return newData
 	#------------------------------------
+
+	#------------------------------------
+	# データの型調整
+	def data_shape(self,data):
+		new_data = np.array([])
+		data = data.values
+		pdb.set_trace()	
+		for i in range(data.shape[1]):
+			for j in range(data.T[i+2].shape[0]):
+				if j==0:
+					new_data = np.append(new_data,data.T[i+2][j])
+				elif data.T[1][j] < data.T[1][j-1]:
+					pdb.set_trace()	
+		reshaped_data = 0
+		return reshaped_data
 
 	#------------------------------------
 	# 説明変数と目的変数に分ける
