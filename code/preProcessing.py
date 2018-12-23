@@ -178,7 +178,7 @@ class pre_processing:
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		# 積み木の形にする
-		newData = self.(data)
+		newData = self.reshape_data(data)
 
 		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
@@ -198,7 +198,34 @@ class pre_processing:
 		# 積み木の形で返す
 		return newData
 	#------------------------------------
+	
+	#------------------------------------
+	# データの型調整
+	def data_reshape(self,data):
+		new_data = np.array([])
+		
+		data = data.values
 
+		reshaped_data = []
+
+		for i in range(data.sahpe[1]):
+			
+			reshaped_data_parts = []
+			for j in range(data.T[i+2].shape[0]):
+				if j==0:
+					new_data = np.append(new_data,data.T[i+2][j])
+				elif data.T[1][j] < data.T[1][j-1]:
+					
+					reshaped_data_parts.appned(new_data)
+				
+				else:
+					print("",j)
+					new_data = np.append(new_data,data.T[i+2][j])
+			reshaped_data.append(resahped_data_parts)
+		
+		pdb.set_trace()
+		return reshaped_data
+					
 	#------------------------------------
 	# 説明変数と目的変数に分ける
 	def divide_track(self, data):
