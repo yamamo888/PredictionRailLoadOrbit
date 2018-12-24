@@ -32,7 +32,7 @@ import pdb
 import concurrent.futures
 
 #------------------------------------------------------------
-# ARIMAモデルでの自己回帰
+# ARIMAモデルでの自己回帰        htitps://k-san.link/ar-process/を参照
 # self.N    : 使用する日数
 # self.p    : 遡る日数(ARモデル)
 # self.q    : 遡る日数(MAモデル)
@@ -62,7 +62,14 @@ class Arima():
         self.w_ma = []        
 
         self.eps = [np.random.normal(1,25) for _ in range(365)]
-    
+     
+    #------------------------------------------------------------
+    # ARモデル
+    # z_ar0     : self.w_arを求めるためのZ行列の列の要素
+    # z_ar1     : self.w_arを求めるためのZ行列
+    # date_ar   : z_ar0の要素
+    # sigma_ar0 : 
+    #------------------------------------------------------------
     def AR(self,y,k):
         start = time.time()
         date_ar = []
@@ -78,7 +85,7 @@ class Arima():
         
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
         sigma_ar1 = np.matmul(z_ar1.T, y) 
-        w_ar_buf = np.matmul(sigma_ar0, sigma_ar1)
+        w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
         self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")  
@@ -98,7 +105,7 @@ class Arima():
 
         sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
         sigma_ma1 = np.matmul(z_ma1.T, e)
-        w_ma_buf = np.matmul(sigma_ma0, sigma_ma1)
+        w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
         self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
         end_time = time.time() - start
         print("time_MA : {0}".format(end_time) + "[sec]") 
