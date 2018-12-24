@@ -226,18 +226,20 @@ if __name__ == "__main__":
     ma_w_list = []
 
     for no in range(len(fileind)):
-        pdb.set_trace()
+        #pdb.set_trace()
         arima = Arima(mytrackData.train_xData[0],mytrackData.train_tData[0])
         # ar_list.append(ar)
         arima.train()
-        arima.w_ar = arima.w_ar.tolist()
-        arima.w_ma = arima.w_ma.tolist()
+        #arima.w_ar = arima.w_ar.tolist()
+        #arima.w_ma = arima.w_ma.tolist()
+        #print(type(arima.w_ar))
         #pdb.set_trace()
         ar_w_list.append(arima.w_ar)
         ma_w_list.append(arima.w_ma)
 
     f_ar = open("ar_w_list.binaryfile","wb")
     f_ma = open("ar_w_list.binaryfile","wb")
-    pickle.dump(ar_w_list,f)
-    pickle.dump(ma_w_list,f)
-    f.close
+    pickle.dump(ar_w_list,f_ar)
+    pickle.dump(ma_w_list,f_ma)
+    f_ar.close()
+    f_ma.close()
