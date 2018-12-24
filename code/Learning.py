@@ -238,7 +238,7 @@ if __name__ == "__main__":
         ma_w_list.append(arima.w_ma)
 
     f_ar = open("ar_w_list.binaryfile","wb")
-    f_ma = open("ar_w_list.binaryfile","wb")
+    f_ma = open("ma_w_list.binaryfile","wb")
     pickle.dump(ar_w_list,f_ar)
     pickle.dump(ma_w_list,f_ma)
     f_ar.close()
