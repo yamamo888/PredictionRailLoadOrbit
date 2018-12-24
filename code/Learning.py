@@ -226,12 +226,13 @@ if __name__ == "__main__":
     ma_w_list = []
 
     for no in range(len(fileind)):
+        pdb.set_trace()
         arima = Arima(mytrackData.train_xData[0],mytrackData.train_tData[0])
         # ar_list.append(ar)
         arima.train()
         arima.w_ar.tolist()
         arima.w_ma.tolist()
-        pdb.set_trace()
+        #pdb.set_trace()
         ar_w_list.append(arima.w_ar)
         ma_w_list.append(arima.w_ma)
 
