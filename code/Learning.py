@@ -32,7 +32,10 @@ import pdb
 import concurrent.futures
 
 #------------------------------------------------------------
-# ARIMAモデルでの自己回帰        htitps://k-san.link/ar-process/を参照
+# ARIMAモデルでの自己回帰 :
+#   ARモデルとMAモデルを
+#   htitps://k-san.link/ar-process/を参照
+#
 # self.N    : 使用する日数
 # self.p    : 遡る日数(ARモデル)
 # self.q    : 遡る日数(MAモデル)
@@ -64,11 +67,13 @@ class Arima():
         self.eps = [np.random.normal(1,25) for _ in range(365)]
      
     #------------------------------------------------------------
-    # ARモデル
+    # ARモデル :
+    #   時系列データの目的変数のみで将来の予測を行う回帰
+    #   self.N日のデータからself.p日遡って回帰を行う
+    #
     # z_ar0     : self.w_arを求めるためのZ行列の列の要素
     # z_ar1     : self.w_arを求めるためのZ行列
-    # date_ar   : z_ar0の要素
-    # sigma_ar0 : 
+    # date_ar   : z_ar0の要素 
     #------------------------------------------------------------
     def AR(self,y,k):
         start = time.time()
@@ -217,14 +222,21 @@ if __name__ == "__main__":
     # w_A = ar_A.train()
 
     # ar_list = []
-    w_list = []
+    ar_w_list = []
+    ma_w_list = []
 
     for no in range(len(fileind)):
         arima = Arima(mytrackData.train_xData[0],mytrackData.train_tData[0])
         # ar_list.append(ar)
         arima.train()
-        w_list.append(arima.w_ar)
+        arima.w_ar.tolist()
+        arima.w_ma.tolist()
+        pdb.set_trace()
+        ar_w_list.append(arima.w_ar)
+        ma_w_list.append(arima.w_ma)
 
-    f = open("w_list.binaryfile","wb")
-    pickle.dump(w_list,f)
+    f_ar = open("ar_w_list.binaryfile","wb")
+    f_ma = open("ar_w_list.binaryfile","wb")
+    pickle.dump(ar_w_list,f)
+    pickle.dump(ma_w_list,f)
     f.close
