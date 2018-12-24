@@ -11,13 +11,15 @@ import pdb
 #-------------------
 # pre_processingクラスの定義定義始まり
 class pre_processing:
-	dataPath = '../data' # データが格納させているフォルダ名
+	dataPath = 'data' # データが格納させているフォルダ名
 
 	#------------------------------------
-	# CSVファイルの読み込み
 	def __init__(self):
 		# trainデータの割合
 		self.trainPer = 0.8
+
+		# dateとキロ程を除いたtrackデータのラベル
+		self.track_label = np.array(["高低左", "高低右", "通り左", "通り右", "水準", "軌間", "速度"])
 
 		# 軌道検測データの読み込み
 		self.track = {}
@@ -31,9 +33,11 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
-	# 値があるかないかの行列の形に変換
+	# [date x キロ程]で中身がtargetの行列を作成
 	def shape_matrix(self, data, target):
-		return data.groupby(["date", "キロ程"]).max()[target].unstack().values
+		newMat = data.groupby(["date", "キロ程"]).max()[target].unstack().values
+
+		return newMat
 	#------------------------------------
 
 	#------------------------------------
@@ -45,43 +49,20 @@ class pre_processing:
 
 		sigma = (size - 1) / 2
 
-		# [0,size] -> [-sigma,sigma] にずらす
+		# [0,size]を[-sigma,sigma]にずらす
 		x = y = np.arange(0, size) - sigma
 		X, Y = np.meshgrid(x, y)
 
 		gauss = np.exp(-(np.square(X) + np.square(Y)) / (2 * np.square(sigma)) / (2 * np.pi * np.square(sigma)))
 
-		# 総和が1になるように
+		# 総和が1になるように正規化
 		kernel = gauss / np.sum(gauss)
 
 		return kernel
 	#------------------------------------
 
 	#------------------------------------
-	# 欠損値を予測する
-	# ガウシアンカーネルと協調フィルタリングの考え方を用いる
-	# 未実装
-	def gauss_complement(self, data, target, index):
-		newData = self.shape_matrix(data, target)
-		row, col = index
-		# ガウシアンカーネルを作成
-		gauss = self.gaussian_kernel(9)
-
-		# ガウシアンカーネルと同じshapeで中心が欠損値の行列を作成
-		# まずは全要素Nanにする
-		mat = np.zeros_like(gauss)
-		mat[:,:] = np.nan
-		# newDataから値をもってくる
-		mat = newData[row][col]
-
-		# 欠損値の予測
-		value = np.nansum(gauss * mat)
-
-		return value
-	#------------------------------------
-
-	#------------------------------------
-	# 削除する欠損値のインデックスを取得する
+	# 削除する欠損値のインデックスを取得
 	def get_del_index(self, data):
 		# NaNのインデックスリスト
 		list_nan = np.array([], dtype=int)
@@ -90,9 +71,10 @@ class pre_processing:
 
 		# 高低左のデータを基準とする
 		nan_mat = self.shape_matrix(data, "高低左")
+
 		for row in range(nan_mat.shape[0]):
 			if(math.isnan(nan_mat[row][0]) == True):
-				list_nan = np.append(list_nan,row)
+					list_nan　=　np.append(list_nan,　i)
 			elif(math.isnan(nan_mat[row][0]) == False):
 				if(list_nan.shape[0] >= 10):
 					list_del = np.append(list_del, list_nan)
@@ -104,24 +86,22 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
-	# 補完する欠損値のインデックスを取得する
-	# 引数であるdataは不要なデータを削除済みのデータセットであることが理想
-	def get_fill_index(self, data):
+	# 補完する欠損値のインデックスを取得
+	def get_fill_index(self, mat):
 		# NaNのインデックスリスト
 		list_nan = np.array([], dtype=int)
-		# 補完するNanのリスト
-		list_fill = np.zeros((1, 2), dtype=int)
-
-		# 高低左のデータを基準とする
-		nan_mat = self.shape_matrix(data, "高低左")
-		# 同じキロ程でみていく
-		for col in range(nan_mat.shape[1]):
-			for row in range(nan_mat.shape[0]):
-				if(math.isnan(nan_mat[row][col]) == True):
+		# 補完するNaNのリスト
+		list_fill = np.zeros((1, 2),dtype=int)
+		
+		# 同じキロ程ごとに違うdateをみていく
+		for col in range(mat.shape[1]):
+			for row in range(mat.shape[0]):
+				if(math.isnan(mat[row][col]) == True):
 					list_nan = np.append(list_nan, [[row, col]], axis=0)
-				elif(math.isnan(nan_mat[row][col]) == False):
+				elif(math.isnan(mat[row][col]) == False):
 					if(0 < list_nan.shape[0] < 10):
 						list_fill = np.append(list_fill, list_nan, axis=0)
+						list_nan = np.zeros((1, 2), dtype=int)
 					else:
 						list_nan = np.zeros((1, 2), dtype=int)
 
@@ -129,54 +109,131 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
+	# 欠損値を補完
+	# 平均からばらつきを考慮して補完
+	def ave_complement(self, mat, row, col):
+		# キロ程を1列分取り出す
+		kilo = mat[:,col]
+		# 平均値
+		ave = np.nanmean(kilo)
+		# 標準偏差
+		std = np.nanstd(kilo)
+
+		# 正規分布に従うとし標準偏差の範囲内でランダムに数字を作成
+		rnd = np.random.randint(ave - std, ave + std)
+		# 補完
+		mat[row][col] = rnd
+
+		return mat
+	#------------------------------------
+
+	#------------------------------------
+	# 欠損値を予測
+	# ガウシアンカーネルと協調フィルタリングの考え方を用いる
+	def gauss_complement(self, mat, row, col):
+		# ガウシアンカーネルを作成
+		gauss = self.gaussian_kernel(9)
+
+		# ガウシアンカーネルと同じshapeで中心が欠損値の行列を作成
+		# 全要素をNaNにする
+		data_mat = np.full_like(gauss, np.nan)
+		# matから値をもってくる
+		data_mat = mat[row-4:row+5][col-4:col+5]
+
+		# 欠損値の予測
+		value = np.nansum(gauss * data_mat)
+		# 補完する
+		mat[row][col] = value
+
+		return mat
+	#------------------------------------
+
+	#------------------------------------
+	# インデックスで場合分けをして補完
+	def complement(self, mat):
+		# [date x キロ程]の行列を取得
+		#newMat = self.shape_matrix(data, target)
+
+		# 行、列のサイズを取得
+		row_max = mat.shape[0]
+		col_max = mat.shape[1]
+
+		# 補完するインデックスを取得
+		fill = self.get_fill_index(mat)
+
+		# 補完
+		for i in range(fill.shape[0]):
+			row, col = fill[i]
+			# 端の欠損値は平均で補完
+			if(row < 4 | (row_max - row) < 4 | col < 4 | (col_max - col) < 4):
+				mat = self.ave_complement(mat, row, col)
+			# 中の欠損値はガウシアンで補完
+			else:
+				mat = self.gauss_complement(mat, row, col)
+
+		return mat
+	#------------------------------------
+
+	#------------------------------------
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
-		newData = data
-		
+		# 積み木の形にする
+		newData = self.reshape_data(data)
+
+		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
-		
-		
-		##-----------------------------
-		##--------------追加-----------
-		reshaped_data = self.data_shape(data)
-		##-----------------------------
-		##-----------------------------
-
-		# 削除
-		for i in range(len(delete)):
+		# 削除ターン
+		for i in range(delete.shape[0]):
 			newData = np.delete(newData, delete[i])
-		#↓は未実装
-		# 補完
-		#for j in range(len(fill)):
-			#newData = self.gauss_complement(newData, fill[i])
 
-		#return newData
+		# 補完ターン
+		for i range(self.track_label.shape[0]):
+			# 積み木のi番目のスライスをもってくる
+			newMat = newData[i]
+			# 補完
+			newMat = self.complement(newMat)
+			# 補完済みのスライスを積み木に戻す
+			newData[i] = newMat
+
+		# 積み木の形で返す
+		return newData
 	#------------------------------------
-
+	
 	#------------------------------------
 	# データの型調整
-	def data_shape(self,data):
+	def data_reshape(self,data):
 		new_data = np.array([])
+		
 		data = data.values
-		pdb.set_trace()	
-		for i in range(data.shape[1]):
+
+		reshaped_data = []
+
+		for i in range(data.sahpe[1]):
+			
+			reshaped_data_parts = []
 			for j in range(data.T[i+2].shape[0]):
 				if j==0:
 					new_data = np.append(new_data,data.T[i+2][j])
 				elif data.T[1][j] < data.T[1][j-1]:
-					pdb.set_trace()	
-		reshaped_data = 0
+					
+					reshaped_data_parts.appned(new_data)
+				
+				else:
+					print("",j)
+					new_data = np.append(new_data,data.T[i+2][j])
+			reshaped_data.append(resahped_data_parts)
+		
+		pdb.set_trace()
 		return reshaped_data
-
+					
 	#------------------------------------
 	# 説明変数と目的変数に分ける
-	# まだこれを使える状態にはなっていない
 	def divide_track(self, data):
-		mat = self.missing_values(data)
+		newData = self.missing_values(data)
 
 		# 目的変数は高低左
-		x = np.delete(mat, 0, axis=0)
-		t = mat[:,0]
+		x = np.delete(newData, 0, axis=0)
+		t = newData[0,:,:]
 
 		return x, t
 	#------------------------------------
@@ -238,7 +295,7 @@ class pre_processing:
 
 		return xTest[no], tTest[no]
 	#------------------------------------
-
+"""
 	#------------------------------------
 	def dump_file(self,filename,data):
 		f = open(filename,'wb')
@@ -261,6 +318,7 @@ class pre_processing:
 			self.dump_file(fname_tTra, self.train_tData[no])
 			# self.dump_file(fname_tTes, self.test_tData[no])
 	#------------------------------------
+"""
 # pre_processingクラスの定義終わり
 #-------------------
 
