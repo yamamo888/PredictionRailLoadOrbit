@@ -134,8 +134,16 @@ if __name__ == "__main__":
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
 
         for i in range(nite):
+<<<<<<< HEAD
             date = sDate + i*aDay
+<<<<<<< HEAD
+=======
+            date = sDate + nite*aDay
+>>>>>>> 8566b67767e8909173a7d7f5179cb5444515b224
+            y.append(pre.predict(date))
+=======
             pre.predict(date)
+>>>>>>> a3f595782894fee333a279776bb04e7bf94d66e2
 
         out = pre.t.iloc[pre.xNum:]
         y.append(out)

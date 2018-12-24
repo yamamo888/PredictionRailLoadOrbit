@@ -29,8 +29,13 @@ import time
 
 import pdb
 
+import concurrent.futures
+
 #------------------------------------------------------------
-# ARIMAモデルでの自己回帰
+# ARIMAモデルでの自己回帰 :
+#   ARモデルとMAモデルを
+#   htitps://k-san.link/ar-process/を参照
+#
 # self.N    : 使用する日数
 # self.p    : 遡る日数(ARモデル)
 # self.q    : 遡る日数(MAモデル)
@@ -56,10 +61,61 @@ class Arima():
         self.q = 12
         self.d = 1
 
-        self.w_ar = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1))
-        self.w_ma = np.random.normal(0.0, pow(100, -0.5), (self.q + 1, 1))
+        self.w_ar = []
+        self.w_ma = []        
 
-        self.eps = np.array([np.random.normal(1,25) for _ in range(365)])
+        self.eps = [np.random.normal(1,25) for _ in range(365)]
+     
+    #------------------------------------------------------------
+    # ARモデル :
+    #   時系列データの目的変数のみで将来の予測を行う回帰
+    #   self.N日のデータからself.p日遡って回帰を行う
+    #
+    # z_ar0     : self.w_arを求めるためのZ行列の列の要素
+    # z_ar1     : self.w_arを求めるためのZ行列
+    # date_ar   : z_ar0の要素 
+    #------------------------------------------------------------
+    def AR(self,y,k):
+        start = time.time()
+        date_ar = []
+        z_ar1 = []
+        for i in range(self.p):
+            z_ar0 = []
+            for j in range(self.N-self.d):
+                date_ar = np.array((self.kDate['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                z_ar0.append(float(self.kDate[self.kDate['date'] == date_ar[-1]]['hll']))
+            z_ar1.append(z_ar0)
+        z_ar1 = np.array(z_ar1).T
+        z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
+        
+        sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
+        sigma_ar1 = np.matmul(z_ar1.T, y) 
+        w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
+        self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
+        end_time = time.time() - start
+        print("time_AR : {0}".format(end_time) + "[sec]")  
+        print('w_ar :', k)
+        print(self.w_ar)
+    
+    def MA(self,e,k):
+        start = time.time()
+        z_ma1 = []
+        for i in range(self.q):
+            z_ma0 = []
+            for j in range(self.N-self.d):
+                z_ma0.append(self.eps[(j+i+2):(j+i+3)][0])
+            z_ma1.append(z_ma0)
+        z_ma1 = np.array(z_ma1).T
+        z_ma1 = np.append(z_ma1, np.ones([z_ma1.shape[0],1]),axis=1)
+
+        sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
+        sigma_ma1 = np.matmul(z_ma1.T, e)
+        w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
+        self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
+        end_time = time.time() - start
+        print("time_MA : {0}".format(end_time) + "[sec]") 
+        print('w_ma :', k)
+        print(self.w_ma)
 
     #------------------------------------------------------------
     # ARIMAモデルの学習
@@ -67,56 +123,41 @@ class Arima():
     # selfi.kDate['hll'][self.k.index[0]] 
     #------------------------------------------------------------
     def train(self):
-        start = time.time()
+        start_all = time.time()
         for k in range(int(self.tData['krage'][-1:]) - 10000):
             self.kDate = self.tData[self.tData['krage']==10000+k]
             #self.k = self.kDate[self.kDate['date'] == '2018-03-31']
-
-            date_ar = []
-            z_ar1 = np.empty(((self.N-self.d),0))
-            z_ma1 = np.empty(((self.N-self.d),0))
-            for i in range(self.p):
-                z_ar0 = []
-                for j in range(self.N-self.d):
-                    date_ar = np.append(date_ar, (self.kDate['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                    z_ar0 = np.append(z_ar0, self.kDate[self.kDate['date'] == date_ar[-1]]['hll'])
-                z_ar0 = z_ar0[np.newaxis].T
-                z_ar1 = np.append(z_ar1, z_ar0,axis=1)
-
-            for i in range(self.q):
-                z_ma0 = []
-                for j in range(self.N-self.d):
-                    z_ma0 = np.append(z_ma0, self.eps[(j+i+2):(j+i+3)]) 
-                z_ma0 = z_ma0[np.newaxis].T
-                z_ma1 = np.append(z_ma1, z_ma0,axis=1)
-                
-            z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
-            z_ma1 = np.append(z_ma1, np.ones([z_ma1.shape[0],1]),axis=1)
-
+            
             y = []
-            date_y = []
+            date_y = None
             e = []
             for i in range(self.N-self.d):
-                date_y = np.append(date_y, (self.kDate['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-                y = np.append(y, self.kDate[self.kDate['date'] == date_y[-1]]['hll'])
-                e = np.append(e, self.eps[i:(i+1)])
-            y = y[np.newaxis].T
-            e = e[np.newaxis].T
+                date_y = np.array((self.kDate['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                if i == 0:
+                    y.append(float(self.kDate[self.kDate['date'] == date_y[-1]]['hll']))
+                    e.append(self.eps[i:(i+1)][0])
+                else:
+                    y.append(float(self.kDate[self.kDate['date'] == date_y[-1]]['hll']))
+                    y[i-1] = y[i-1] - y[i]
+                    e.append(self.eps[i:(i+1)][0])
+                    e[i-1] = e[i-1] - e[i]
+            y = np.array(y)[np.newaxis].T
+            e = np.array(e)[np.newaxis].T
             
-            sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
-            sigma_ar1 = np.matmul(z_ar1.T, y)
-            self.w_ar = np.matmul(sigma_ar0, sigma_ar1)
-            print('w_ar :', k)
-            print(self.w_ar)
+            #z_ar0.append(float(self.kDate[self.kDate['date'] == date_ar[-1]]['hll']))
+            #with concurrent.futures.ProcessPoolExecutor() as executor:
+            #    executor = concurrent.futures.ProcessPoolExecutor(max_workers=2)
+            #    executor.submit(self.AR,y,k)
+            #    executor.submit(self.MA,e,k)
+            self.AR(y,k)
+            self.MA(e,k)
 
-            sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
-            sigma_ma1 = np.matmul(z_ma1.T, e)
-            ipdb.set_trace()
-            self.w_ma = np.matmul(sigma_ma0, sigma_ma1)
-            print('w_ma :', k)
-            print(self.w_ma)
-        end_time = time.time() - start
+        end_time = time.time() - start_all
         print("time : {0}".format(end_time) + "[sec]") 
+
+    def multi_train(self):
+        with concurrent.futures.ProcessPoolExecutor(os.cpu_count()) as executor:
+            executor.submit(self.train)
 
     def predict(self,t):
         #pdb.set_trace()
@@ -181,14 +222,21 @@ if __name__ == "__main__":
     # w_A = ar_A.train()
 
     # ar_list = []
-    w_list = []
+    ar_w_list = []
+    ma_w_list = []
 
     for no in range(len(fileind)):
         arima = Arima(mytrackData.train_xData[0],mytrackData.train_tData[0])
         # ar_list.append(ar)
         arima.train()
-        w_list.append(arima.w_ar)
+        arima.w_ar.tolist()
+        arima.w_ma.tolist()
+        pdb.set_trace()
+        ar_w_list.append(arima.w_ar)
+        ma_w_list.append(arima.w_ma)
 
-    f = open("w_list.binaryfile","wb")
-    pickle.dump(w_list,f)
+    f_ar = open("ar_w_list.binaryfile","wb")
+    f_ma = open("ar_w_list.binaryfile","wb")
+    pickle.dump(ar_w_list,f)
+    pickle.dump(ma_w_list,f)
     f.close
