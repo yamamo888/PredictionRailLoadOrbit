@@ -102,9 +102,9 @@ class trackData():
         self.tTrain_list = []
         self.fileind = ['A','B','C','D']
         self.fNum = len(self.fileind)
+        self.load_file("ar_w_list.binaryfile",self.ar_w_list)
+        self.load_file("ma_w_list.binaryfile",self.ma_w_list)
         for no in range(self.fNum):
-            self.load_file("ar_w_list.binaryfile",self.ar_w_list)
-            self.load_file("ma_w_list.binaryfile",self.ma_w_list)
             fname_xTra = "xTrain_{}.binaryfile".format(self.fileind[no])
             fname_tTra = "tTrain_{}.binaryfile".format(self.fileind[no])
             self.load_file(fname_xTra,self.xTrain_list)
