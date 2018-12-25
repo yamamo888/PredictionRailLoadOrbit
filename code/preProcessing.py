@@ -11,7 +11,7 @@ import pdb
 #-------------------
 # pre_processingクラスの定義定義始まり
 class pre_processing:
-	dataPath = 'data' # データが格納させているフォルダ名
+	dataPath = '../data' # データが格納させているフォルダ名
 
 	#------------------------------------
 	def __init__(self):
@@ -66,7 +66,7 @@ class pre_processing:
 	def get_del_index(self, data):
 		# NaNのインデックスリスト
 		list_nan = np.array([], dtype=int)
-		# 削除するNanのリスト
+		# 削除するNaNのリスト
 		list_del = np.array([], dtype=int)
 
 		# 高低左のデータを基準とする
@@ -74,7 +74,7 @@ class pre_processing:
 
 		for row in range(nan_mat.shape[0]):
 			if(math.isnan(nan_mat[row][0]) == True):
-					list_nan　=　np.append(list_nan,　i)
+					list_nan = np.append(list_nan, i)
 			elif(math.isnan(nan_mat[row][0]) == False):
 				if(list_nan.shape[0] >= 10):
 					list_del = np.append(list_del, list_nan)
@@ -153,6 +153,7 @@ class pre_processing:
 	def complement(self, mat):
 		# [date x キロ程]の行列を取得
 		#newMat = self.shape_matrix(data, target)
+		newMat = mat
 
 		# 行、列のサイズを取得
 		row_max = mat.shape[0]
@@ -166,19 +167,19 @@ class pre_processing:
 			row, col = fill[i]
 			# 端の欠損値は平均で補完
 			if(row < 4 | (row_max - row) < 4 | col < 4 | (col_max - col) < 4):
-				mat = self.ave_complement(mat, row, col)
+				newMat = self.ave_complement(newMat, row, col)
 			# 中の欠損値はガウシアンで補完
 			else:
-				mat = self.gauss_complement(mat, row, col)
+				newMat = self.gauss_complement(newMat, row, col)
 
-		return mat
+		return newMat
 	#------------------------------------
 
 	#------------------------------------
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		# 積み木の形にする
-		newData = self.reshape_data(data)
+		newData = self.data_reshape(data)
 
 		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
@@ -187,14 +188,15 @@ class pre_processing:
 			newData = np.delete(newData, delete[i])
 
 		# 補完ターン
-		for i range(self.track_label.shape[0]):
+		for j in range(self.track_label.shape[0]):
 			# 積み木のi番目のスライスをもってくる
-			newMat = newData[i]
+			newMat = newData[j]
 			# 補完
 			newMat = self.complement(newMat)
 			# 補完済みのスライスを積み木に戻す
-			newData[i] = newMat
+			newData[j] = newMat
 
+		pdb.set_trace()
 		# 積み木の形で返す
 		return newData
 	#------------------------------------
@@ -208,7 +210,7 @@ class pre_processing:
 
 		reshaped_data = []
 
-		for i in range(data.sahpe[1]):
+		for i in range(data.shape[1]):
 			
 			reshaped_data_parts = []
 			for j in range(data.T[i+2].shape[0]):
@@ -216,14 +218,14 @@ class pre_processing:
 					new_data = np.append(new_data,data.T[i+2][j])
 				elif data.T[1][j] < data.T[1][j-1]:
 					
-					reshaped_data_parts.appned(new_data)
+					reshaped_data_parts.append(new_data)
 				
 				else:
 					print("",j)
 					new_data = np.append(new_data,data.T[i+2][j])
 			reshaped_data.append(resahped_data_parts)
 		
-		pdb.set_trace()
+		#pdb.set_trace()
 		return reshaped_data
 					
 	#------------------------------------
