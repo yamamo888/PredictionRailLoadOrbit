@@ -62,10 +62,10 @@ class Arima():
         self.d = 1
 
         self.w_ar = []
-        self.w_ma = []        
+        self.w_ma = []
 
         self.eps = [np.random.normal(1,25) for _ in range(365)]
-     
+
     #------------------------------------------------------------
     # ARモデル :
     #   時系列データの目的変数のみで将来の予測を行う回帰
@@ -73,7 +73,7 @@ class Arima():
     #
     # z_ar0     : self.w_arを求めるためのZ行列の列の要素
     # z_ar1     : self.w_arを求めるためのZ行列
-    # date_ar   : z_ar0の要素 
+    # date_ar   : z_ar0の要素
     #------------------------------------------------------------
     def AR(self,y,k):
         start = time.time()
@@ -87,16 +87,16 @@ class Arima():
             z_ar1.append(z_ar0)
         z_ar1 = np.array(z_ar1).T
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
-        
+
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
-        sigma_ar1 = np.matmul(z_ar1.T, y) 
+        sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
         self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
         end_time = time.time() - start
-        print("time_AR : {0}".format(end_time) + "[sec]")  
+        print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_ar :', k)
         print(self.w_ar)
-    
+
     def MA(self,e,k):
         start = time.time()
         z_ma1 = []
@@ -113,21 +113,21 @@ class Arima():
         w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
         self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
         end_time = time.time() - start
-        print("time_MA : {0}".format(end_time) + "[sec]") 
+        print("time_MA : {0}".format(end_time) + "[sec]")
         print('w_ma :', k)
         print(self.w_ma)
 
     #------------------------------------------------------------
     # ARIMAモデルの学習
     # date_ar :
-    # selfi.kDate['hll'][self.k.index[0]] 
+    # selfi.kDate['hll'][self.k.index[0]]
     #------------------------------------------------------------
     def train(self):
         start_all = time.time()
         for k in range(int(self.tData['krage'][-1:]) - 10000):
             self.kDate = self.tData[self.tData['krage']==10000+k]
             #self.k = self.kDate[self.kDate['date'] == '2018-03-31']
-            
+
             y = []
             date_y = None
             e = []
@@ -143,7 +143,7 @@ class Arima():
                     e[i-1] = e[i-1] - e[i]
             y = np.array(y)[np.newaxis].T
             e = np.array(e)[np.newaxis].T
-            
+
             #z_ar0.append(float(self.kDate[self.kDate['date'] == date_ar[-1]]['hll']))
             #with concurrent.futures.ProcessPoolExecutor() as executor:
             #    executor = concurrent.futures.ProcessPoolExecutor(max_workers=2)
@@ -153,7 +153,7 @@ class Arima():
             self.MA(e,k)
 
         end_time = time.time() - start_all
-        print("time : {0}".format(end_time) + "[sec]") 
+        print("time : {0}".format(end_time) + "[sec]")
 
     def multi_train(self):
         with concurrent.futures.ProcessPoolExecutor(os.cpu_count()) as executor:
@@ -227,7 +227,7 @@ if __name__ == "__main__":
 
     for no in range(len(fileind)):
         #pdb.set_trace()
-        arima = Arima(mytrackData.train_xData[0],mytrackData.train_tData[0])
+        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
         # ar_list.append(ar)
         arima.train()
         #arima.w_ar = arima.w_ar.tolist()
