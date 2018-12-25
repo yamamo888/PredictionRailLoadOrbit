@@ -54,17 +54,22 @@ class Arima():
 
         self.tNum = tData.shape[0]
 
+        ns_to_day = 86400000000000
+        amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
+        
+        #pdb.set_trace()
+
         self.t = self.tData[self.tData['date'] == '2018-3-31']
-        self.kDate = np.empty([365, 3]).tolist()
+        self.kDate = np.empty([amount, 3]).tolist()
         self.N = 10
         self.p = 10
         self.q = 12
         self.d = 1
 
         self.w_ar = []
-        self.w_ma = []        
+        self.w_ma = [] 
 
-        self.eps = [np.random.normal(1,25) for _ in range(365)]
+        self.eps = [np.random.normal(1,25) for _ in range(amount)]
      
     #------------------------------------------------------------
     # ARモデル :
@@ -124,10 +129,10 @@ class Arima():
     #------------------------------------------------------------
     def train(self):
         start_all = time.time()
-        for k in range(int(self.tData['krage'][-1:]) - 10000):
+        for k in range(int(self.tData['krage'][-1:]) - 9999):
             self.kDate = self.tData[self.tData['krage']==10000+k]
             #self.k = self.kDate[self.kDate['date'] == '2018-03-31']
-            
+
             y = []
             date_y = None
             e = []
