@@ -94,6 +94,7 @@ class Arima():
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
 
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
+        sigma_ar0 += 0.0000001 * np.eye(sigma_ar0.shape[0])
         sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
         self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
@@ -114,6 +115,7 @@ class Arima():
         z_ma1 = np.append(z_ma1, np.ones([z_ma1.shape[0],1]),axis=1)
 
         sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
+        sigma_ma0 += 0.0000001 * np.eye(sigma_ma0.shape[0])
         sigma_ma1 = np.matmul(z_ma1.T, e)
         w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
         self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
@@ -232,7 +234,7 @@ if __name__ == "__main__":
 
     for no in range(len(fileind)):
         #pdb.set_trace()
-        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
+        arima = Arima(mytrackData.train_xData[no+1],mytrackData.train_tData[no+1])
         # ar_list.append(ar)
         arima.train()
         #arima.w_ar = arima.w_ar.tolist()
