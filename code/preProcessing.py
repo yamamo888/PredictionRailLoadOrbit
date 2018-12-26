@@ -204,30 +204,16 @@ class pre_processing:
 	#------------------------------------
 	# データの型調整
 	def data_reshape(self,data):
-		new_data = np.array([])
 		
-		data = data.values
-
 		reshaped_data = []
-
-		for i in range(data.shape[1]):
-			
-			reshaped_data_parts = []
-			for j in range(data.T[i+2].shape[0]):
-				if j==0:
-					new_data = np.append(new_data,data.T[i+2][j])
-				elif data.T[1][j] < data.T[1][j-1]:
-					
-					reshaped_data_parts.append(new_data)
-				
-				else:
-					print("",j)
-					new_data = np.append(new_data,data.T[i+2][j])
-			reshaped_data.append(resahped_data_parts)
 		
-		#pdb.set_trace()
-		return reshaped_data
-					
+		for i in range(data.sahpe[1]-2):
+			data_new = np.reshaped(data.values.T[i+2],(365,27906))
+			reshaped_data.append(data_new)
+
+		numpy_data = np.array(reshaped_data)
+		
+		return numpy_data					
 	#------------------------------------
 	# 説明変数と目的変数に分ける
 	def divide_track(self, data):
