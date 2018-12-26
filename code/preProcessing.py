@@ -74,7 +74,7 @@ class pre_processing:
 
 		for row in range(nan_mat.shape[0]):
 			if(math.isnan(nan_mat[row][0]) == True):
-					list_nan = np.append(list_nan, i)
+					list_nan = np.append(list_nan, row)
 			elif(math.isnan(nan_mat[row][0]) == False):
 				if(list_nan.shape[0] >= 10):
 					list_del = np.append(list_del, list_nan)
@@ -154,6 +154,8 @@ class pre_processing:
 		# [date x キロ程]の行列を取得
 		#newMat = self.shape_matrix(data, target)
 		newMat = mat
+		
+		pdb.set_trace()		
 
 		# 行、列のサイズを取得
 		row_max = mat.shape[0]
@@ -183,6 +185,7 @@ class pre_processing:
 
 		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
+		#pdb.set_trace()
 		# 削除ターン
 		for i in range(delete.shape[0]):
 			newData = np.delete(newData, delete[i])
@@ -207,10 +210,10 @@ class pre_processing:
 		
 		reshaped_data = []
 		
-		for i in range(data.sahpe[1]-2):
-			data_new = np.reshaped(data.values.T[i+2],(365,27906))
+		for i in range(data.shape[1]-2):
+			data_new = np.reshape(data.values.T[i+2],(365,27906))
 			reshaped_data.append(data_new)
-
+			print("",i)
 		numpy_data = np.array(reshaped_data)
 		
 		return numpy_data					
