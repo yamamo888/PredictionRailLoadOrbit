@@ -35,7 +35,7 @@ import pdb
 #self.p : 予測のためにさかのぼる日数
 #self.days : 入力データの総日数
 #self.krage_length : 入力データの総キロ数
-#
+#self.eps : 学習で使用したホワイトノイズ
 #------------------------------------
 class prediction():
     def __init__(self,w_ar,w_ma,x,t,eps):
@@ -108,7 +108,7 @@ class trackData():
 
     def load_file(self,filename):
         f = open(filename,'rb')
-        result = pickle.load(f))
+        result = pickle.load(f)
         f.close
         return result
 
