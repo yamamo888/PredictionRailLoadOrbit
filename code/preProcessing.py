@@ -92,7 +92,7 @@ class pre_processing:
 		list_nan = np.array([], dtype=int)
 		# 補完するNaNのリスト
 		list_fill = np.zeros((1, 2),dtype=int)
-		
+
 		# 同じキロ程ごとに違うdateをみていく
 		for col in range(mat.shape[1]):
 			for row in range(mat.shape[0]):
@@ -154,8 +154,8 @@ class pre_processing:
 		# [date x キロ程]の行列を取得
 		#newMat = self.shape_matrix(data, target)
 		newMat = mat
-		
-		pdb.set_trace()		
+
+		pdb.set_trace()
 
 		# 行、列のサイズを取得
 		row_max = mat.shape[0]
@@ -185,7 +185,9 @@ class pre_processing:
 
 		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
-		#pdb.set_trace()
+		# 反転
+		delete = delete[::-1]
+		
 		# 削除ターン
 		for i in range(delete.shape[0]):
 			newData = np.delete(newData, delete[i])
@@ -203,20 +205,20 @@ class pre_processing:
 		# 積み木の形で返す
 		return newData
 	#------------------------------------
-	
+
 	#------------------------------------
 	# データの型調整
 	def data_reshape(self,data):
-		
+
 		reshaped_data = []
-		
+
 		for i in range(data.shape[1]-2):
 			data_new = np.reshape(data.values.T[i+2],(365,27906))
 			reshaped_data.append(data_new)
 			print("",i)
 		numpy_data = np.array(reshaped_data)
-		
-		return numpy_data					
+
+		return numpy_data
 	#------------------------------------
 	# 説明変数と目的変数に分ける
 	def divide_track(self, data):
