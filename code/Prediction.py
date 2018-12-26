@@ -40,6 +40,7 @@ import pdb
 class prediction():
     def __init__(self,w_ar,w_ma,x,t,eps):
         self.p = 10
+        self.q = 12
         self.N = 10
         self.x = x
         self.t = t
@@ -65,7 +66,7 @@ class prediction():
             y = np.append(y,self.t[self.t['date'] == date]['hll'])
 
         y = y.reshape([self.p,self.krage_length])
-        y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + np.matmul(self.w_ma, self.eps[1:self.p]) + self.eps[0]
+        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) + np.sum(self.w_ma*self.eps[1:self.q],axis=0) + self.eps[0]
         df = pd.DataFrame(y.T,columns=['hll'])
         #'date'をdfの末尾に追加
         df['date'] = day

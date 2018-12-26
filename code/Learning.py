@@ -43,6 +43,8 @@ import concurrent.futures
 # self.w_ar : ARモデルでのパラメータ(重み)
 # self.w_ma : MAモデルでのパラメータ(重み)
 # self.eps  : MAモデルで使用するホワイトノイズ
+#self.kData : キロ程ごとのデータを格納する変数
+#self.kEps : キロ程ごとの誤差項を格納する変数
 #------------------------------------------------------------
 class Arima():
     def __init__(self,xData,tData):
@@ -60,16 +62,18 @@ class Arima():
         #pdb.set_trace()
 
         self.t = self.tData[self.tData['date'] == '2018-3-31']
-        self.kDate = np.empty([amount, 3]).tolist()
+        self.kData = []
+        self.kEps = []
         self.N = 10
         self.p = 10
         self.q = 12
         self.d = 1
 
+        self.krage_length = xData[xData["date"] = dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
         self.w_ar = []
         self.w_ma = []
 
-        self.eps = [np.random.normal(1,25) for _ in range(amount)]
+        self.eps = np.random.normal(1,25,(amount,self.krage_length))
 
     #------------------------------------------------------------
     # ARモデル :
@@ -87,9 +91,10 @@ class Arima():
         for i in range(self.p):
             z_ar0 = []
             for j in range(self.N-self.d):
-                date_ar = np.array((self.kDate['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                z_ar0.append(float(self.kDate[self.kDate['date'] == date_ar[-1]]['hll']))
+                date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
             z_ar1.append(z_ar0)
+
         z_ar1 = np.array(z_ar1).T
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
 
@@ -112,6 +117,7 @@ class Arima():
             for j in range(self.N-self.d):
                 z_ma0.append(self.eps[(j+i+2):(j+i+3)][0])
             z_ma1.append(z_ma0)
+
         z_ma1 = np.array(z_ma1).T
         z_ma1 = np.append(z_ma1, np.ones([z_ma1.shape[0],1]),axis=1)
 
@@ -129,31 +135,32 @@ class Arima():
     #------------------------------------------------------------
     # ARIMAモデルの学習
     # date_ar :
-    # selfi.kDate['hll'][self.k.index[0]]
+    # selfi.kData['hll'][self.k.index[0]]
     #------------------------------------------------------------
     def train(self):
         start_all = time.time()
-        for k in range(int(self.tData['krage'][-1:]) - 9999):
-            self.kDate = self.tData[self.tData['krage']==10000+k]
-            #self.k = self.kDate[self.kDate['date'] == '2018-03-31']
+        for k in range(self.krage_length):
+            self.kData = self.tData[self.tData['krage']==10000+k]
+            self.kEps = self.eps[:,k]
+            #self.k = self.kData[self.kData['date'] == '2018-03-31']
 
             y = []
             date_y = None
             e = []
             for i in range(self.N-self.d):
-                date_y = np.array((self.kDate['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 if i == 0:
-                    y.append(float(self.kDate[self.kDate['date'] == date_y[-1]]['hll']))
-                    e.append(self.eps[i:(i+1)][0])
+                    y.append(float(self.kData[self.['date'] == date_y[-1]]['hll']))
+                    e.append(self.kEps[i])
                 else:
-                    y.append(float(self.kDate[self.kDate['date'] == date_y[-1]]['hll']))
+                    y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
                     y[i-1] = y[i-1] - y[i]
-                    e.append(self.eps[i:(i+1)][0])
+                    e.append(self.kEps[i])
                     e[i-1] = e[i-1] - e[i]
             y = np.array(y)[np.newaxis].T
             e = np.array(e)[np.newaxis].T
 
-            #z_ar0.append(float(self.kDate[self.kDate['date'] == date_ar[-1]]['hll']))
+            #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
             #with concurrent.futures.ProcessPoolExecutor() as executor:
             #    executor = concurrent.futures.ProcessPoolExecutor(max_workers=2)
             #    executor.submit(self.AR,y,k)
