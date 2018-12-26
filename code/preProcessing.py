@@ -5,6 +5,7 @@ import math
 import os
 #import matplotlib.pylab as plt   #折れ線グラフを作るやつ
 import matplotlib.pyplot as plt
+import pickle
 import pdb
 
 
@@ -96,7 +97,7 @@ class pre_processing:
 		# 標準偏差
 		std = np.nanstd(kilo)
 		# 正規分布に従うとし標準偏差の範囲内でランダムに数字を作成
-		rnd = (ave - std) * np.random.rand() + (ave + std)
+		rnd = (ave - std) * np.random.rand() + ave + std
 		# 補完
 		mat[row][col] = rnd
 
@@ -167,7 +168,7 @@ class pre_processing:
 		for i in range(delete.shape[0]):
 			newData = np.delete(newData, delete[i], 0)
 		print("success delete!!")
-		#pdb.set_trace()
+
 		# 補完ターン
 		for j in range(1):
 			# 積み木のi番目のスライスをもってくる
@@ -177,7 +178,6 @@ class pre_processing:
 			# 補完済みのスライスを積み木に戻す
 			newData[j] = newMat
 
-		# 積み木の形で返す
 		return newData
 	#------------------------------------
 
@@ -218,131 +218,80 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
-	# 今のところはtrackデータのみ使う
-	# trainデータを読み込む
-	def get_train_data(self, no, flag):
-		trainInd = {}
-		x = {}
-		t = {}
-		mat = {}
-		xTrain = {}
-		tTrain = {}
-		mat_train = {}
-
+	# trainデータとtestデータに分けて取得
+	def get_divide_data(self, no, flag):
+		# flagでtrackかequipmentを分ける
 		if(flag == 0):
-			x[no], t[no] = self.divide_track(self.track[no])
-			trainInd[no] = int(len(self.track[no]) * self.trainPer)
+			x, t = self.divide_track(self.track[no])
+			trainInd = int(len(self.track[no]) * self.trainPer)
 		elif(flag == 1):
-			x[no], t[no] = self.divide_equipment(self.equipment[no])
-			trainInd[no] = int(len(self.equipment[no]) * self.trainPer)
-		xTrain[no] = x[no][:trainInd[no]]
-		tTrain[no] = t[no][:trainInd[no]]
+			x, t = self.divide_equipment(self.equipment[no])
+			trainInd = int(len(self.equipment[no]) * self.trainPer)
 
-		return xTrain[no], tTrain[no]
+		# trainデータに分ける
+		xTrain = x[:trainInd]
+		tTrain = t[:trainInd]
+		# testデータに分ける
+		xTest = x[trainInd:]
+		tTest = t[trainInd:]
+
+		return xTrain, tTrain, xTest, tTest
 	#------------------------------------
 
 	#------------------------------------
-	# testデータを読み込む
-	def get_test_data(self, no):
-		trainInd = {}
-		x = {}
-		t = {}
-		mat = {}
-		xTest = {}
-		tTest = {}
-		mat_test = {}
+	# pickleでdumpする
+	def dump_file(self, filename, data):
+		# ファイルの出力先
+		fullpath = os.path.join(self.dataPath, filename)
 
-		if(flag == 0):
-			x[no], t[no] = self.divide_track(self.track[no])
-			mat[no] = self.track[no].groupby(["date", "キロ程"]).max()["高低左"].unstack().notnull().values
-			trainInd[no] = int(len(self.track[no]) * self.trainPer)
-		elif(flag == 1):
-			x[no], t[no] = self.divide_equipment(self.equipment[no])
-			trainInd[no] = int(len(self.equipment[no]) * self.trainPer)
-		#trainInd[no] = int(len(self.track[no])*self.trainPer)
-		xTest[no] = x[no][trainInd[no]:]
-		tTest[no] = t[no][trainInd[no]:]
-
-
-		return xTest[no], tTest[no]
-	#------------------------------------
-"""
-	#------------------------------------
-	def dump_file(self,filename,data):
-		f = open(filename,'wb')
-		pickle.dump(data,f)
+		f = open(fullpath, 'wb')
+		pickle.dump(data, f)
 		f.close
 	#------------------------------------
 
 	#------------------------------------
-	def dump_data(self):
-		fileind = ['A','B','C','D']
+	# 前処理後のデータをバイナリファイルとして出力
+	def dump_data(self, no, flag):
+		# trainデータ、testデータを読み込む
+		xTrain, tTrain, xTest, tTest = self.get_divide_data(no, flag)
 
-		for no in range(len(fileind)):
-			fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
-			# fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
-			fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
-			# fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
-
-			self.dump_file(fname_xTra, self.train_xData[no])
-			# self.dump_file(fname_xTes, self.test_xData[no])
-			self.dump_file(fname_tTra, self.train_tData[no])
-			# self.dump_file(fname_tTes, self.test_tData[no])
+		# flagでtrackかequipmentを分ける
+		if(flag == 0):
+			# 名前付け
+			fname_xTrain = "track_xTrain_{}.binaryfile".format(no)
+			fname_tTrain = "track_tTrain_{}.binaryfile".format(no)
+			fname_xTest = "track_xTest_{}.binaryfile".format(no)
+			fname_tTest = "track_tTest_{}.binaryfile".format(no)
+			# 出力
+			self.dump_file(fname_xTrain, xTrain)
+			self.dump_file(fname_tTrain, tTrain)
+			self.dump_file(fname_xTest, xTest)
+			self.dump_file(fname_tTest, tTest)
+		elif(flag == 1):
+			# 名前付け
+			fname_xTrain = "equipment_xTrain_{}.binaryfile".format(no)
+			fname_tTrain = "equipment_tTrain_{}.binaryfile".format(no)
+			fname_xTest = "equipment_xTest_{}.binaryfile".format(no)
+			fname_tTest = "equipment_tTest_{}.binaryfile".format(no)
+			# 出力
+			self.dump_file(fname_xTrain, xTrain)
+			self.dump_file(fname_tTrain, tTrain)
+			self.dump_file(fname_xTest, xTest)
+			self.dump_file(fname_tTest, tTest)
 	#------------------------------------
-"""
 # pre_processingクラスの定義終わり
 #-------------------
 
 #-------------------
 # メインの始まり
 if __name__ == "__main__":
-	xTrain= {}
-	tTrain = {}
-	xTest = {}
-	tTest = {}
-
-	xTrain_e = {}
-	tTrain_e = {}
-	xTest_e = {}
-	tTest_e = {}
-
+	# pre_processingクラスの呼び出し
 	myData = pre_processing()
 
 	for no in ['A', 'B', 'C', 'D']:
-		# trainデータについて
-		xTrain[no], tTrain[no]= myData.get_train_data(no, 0)
-		print("【xTrain_{}】\n{}\n".format(no, xTrain[no]))
-		print("【tTrain_{}】\n{}\n".format(no, tTrain[no]))
-		"""うまくいかない
-		# ファイル出力
-		# 説明変数
-		fname = "xTrain_{}.txt".format(no)
-		myData.file_output(fname, xTrain[no])
-		# 目的変数
-		fname = "tTrain_{}.txt".format(no)
-		myData.file_output(fname, tTrain[no])"""
-
-		# testデータについて
-		xTest[no], tTest[no] = myData.get_test_data(no, 0)
-		print("【xTest_{}】\n{}\n".format(no, xTest[no]))
-		print("【tTest_{}】\n{}\n".format(no, tTest[no]))
-		"""うまくいかない
-		# ファイル出力
-		# 説明変数
-		fname = "xTest_{}.txt".format(no)
-		myData.file_output(fname, xTest[no])
-		# 目的変数
-		fname = "tTest_{}.txt".format(no)
-		myData.file_output(fname, tTest[no])"""
-
-	for no in ['A','B','C','D']:
-		#trainデータについて
-		xTrain_e[no],tTrain[no] = myData.get_train_data(no, 1)
-		print("【xTrain_e{}】\n{}\n".format(no, xTrain[no]))
-		print("【tTrain_e{}】\n{}\n".format(no, xTrain[no]))
-
-		xTest_e[no],tTrain_e[no] = myData.get_test_data(no, 1)
-		print("【xTest_e{}】\n{}\n".format(no, xTest_e[no]))
-		print("【tTest_e{}】\n{}\n".format(no, xTest_e[no]))
+		# trackについて
+		myData.dump_data(no, 0)
+		# equipmentについて
+		myData.dump_data(no, 1)
 #メインの終わり
 #-------------------
