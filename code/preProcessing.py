@@ -11,7 +11,7 @@ import pdb
 #-------------------
 # pre_processingクラスの定義定義始まり
 class pre_processing:
-	dataPath = '../data' # データが格納させているフォルダ名
+	dataPath = '../data' # データが格納されているフォルダ名
 
 	#------------------------------------
 	def __init__(self):
@@ -74,7 +74,7 @@ class pre_processing:
 
 		for row in range(nan_mat.shape[0]):
 			if(math.isnan(nan_mat[row][0]) == True):
-					list_nan = np.append(list_nan, row)
+				list_nan = np.append(list_nan, row)
 			elif(math.isnan(nan_mat[row][0]) == False):
 				if(list_nan.shape[0] >= 10):
 					list_del = np.append(list_del, list_nan)
@@ -86,27 +86,6 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
-	# 補完する欠損値のインデックスを取得
-	def get_fill_index(self, mat):
-		# NaNのインデックスリスト
-		list_nan = np.array([], dtype=int)
-		# 補完するNaNのリスト
-		list_fill = np.zeros((1, 2),dtype=int)
-
-		# 同じキロ程ごとに違うdateをみていく
-		for col in range(mat.shape[1]):
-			for row in range(mat.shape[0]):
-				if(math.isnan(mat[row][col]) == True):
-					list_nan = np.append(list_nan, [[row, col]], axis=0)
-				elif(math.isnan(mat[row][col]) == False):
-					if(0 < list_nan.shape[0] < 10):
-						list_fill = np.append(list_fill, list_nan, axis=0)
-						list_nan = np.zeros((1, 2), dtype=int)
-					else:
-						list_nan = np.zeros((1, 2), dtype=int)
-
-		return list_fill[1:,:]
-	#------------------------------------
 	# 欠損値を補完
 	# 平均からばらつきを考慮して補完
 	def ave_complement(self, mat, row, col):
@@ -116,9 +95,8 @@ class pre_processing:
 		ave = np.nanmean(kilo)
 		# 標準偏差
 		std = np.nanstd(kilo)
-
 		# 正規分布に従うとし標準偏差の範囲内でランダムに数字を作成
-		rnd = np.random.randint(ave - std, ave + std)
+		rnd = (ave - std) * np.random.rand() + (ave + std)
 		# 補完
 		mat[row][col] = rnd
 
@@ -136,8 +114,7 @@ class pre_processing:
 		# 全要素をNaNにする
 		data_mat = np.full_like(gauss, np.nan)
 		# matから値をもってくる
-		data_mat = mat[row-4:row+5][col-4:col+5]
-
+		data_mat = mat[row-4:row+5, col-4:col+5]
 		# 欠損値の予測
 		value = np.nansum(gauss * data_mat)
 		# 補完する
@@ -149,28 +126,25 @@ class pre_processing:
 	#------------------------------------
 	# インデックスで場合分けをして補完
 	def complement(self, mat):
-		# [date x キロ程]の行列を取得
-		#newMat = self.shape_matrix(data, target)
 		newMat = mat
-
-		#pdb.set_trace()
 
 		# 行、列のサイズを取得
 		row_max = mat.shape[0]
 		col_max = mat.shape[1]
 
 		# 補完するインデックスを取得
-		fill = self.get_fill_index(mat)
+		row, col = np.where(np.isnan(mat) == True)
 
 		# 補完
-		for i in range(fill.shape[0]):
-			row, col = fill[i]
-			# 端の欠損値は平均で補完
-			if(row < 4 | (row_max - row) < 4 | col < 4 | (col_max - col) < 4):
-				newMat = self.ave_complement(newMat, row, col)
-			# 中の欠損値はガウシアンで補完
+		for i in range(row.shape[0]):
+			if(row[i] < 4 or (row_max - row[i]) <= 4 or col[i] < 4 or (col_max - col[i]) <= 4):
+				print("fill:{}, index:[{},{}]".format(i, row[i], col[i]))
+				# 端の欠損値は平均で補完
+				newMat = self.ave_complement(newMat, row[i], col[i])
 			else:
-				newMat = self.gauss_complement(newMat, row, col)
+				print("fill:{}, index:[{},{}]".format(i, row[i], col[i]))
+				# 中の欠損値はガウシアンで補完
+				newMat = self.gauss_complement(newMat, row[i], col[i])
 
 		return newMat
 	#------------------------------------
@@ -185,14 +159,13 @@ class pre_processing:
 		# 反転
 		delete = delete[::-1]
 		print("start reshape")
-		newData=np.reshape(data.values.T[2],(365,27906))
-		#pdb.set_trace()		
-
+		newData = np.reshape(data.values.T[2], (365, 27906))
 		print("success reshape!!")
+
 		# 削除ターン
 		print("start delete")
 		for i in range(delete.shape[0]):
-			newData = np.delete(newData,delete[i],0)
+			newData = np.delete(newData, delete[i], 0)
 		print("success delete!!")
 		#pdb.set_trace()
 		# 補完ターン
@@ -204,7 +177,6 @@ class pre_processing:
 			# 補完済みのスライスを積み木に戻す
 			newData[j] = newMat
 
-		pdb.set_trace()
 		# 積み木の形で返す
 		return newData
 	#------------------------------------
@@ -223,6 +195,8 @@ class pre_processing:
 		numpy_data = np.array(reshaped_data)
 
 		return numpy_data
+	#------------------------------------
+
 	#------------------------------------
 	# 説明変数と目的変数に分ける
 	def divide_track(self, data):
