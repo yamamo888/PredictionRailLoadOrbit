@@ -127,23 +127,22 @@ class pre_processing:
 	#------------------------------------
 	# インデックスで場合分けをして補完
 	def complement(self, mat):
-		newMat = mat
+		# object型からfloat型にキャスト
+		newMat = mat.astype(float)
 
 		# 行、列のサイズを取得
-		row_max = mat.shape[0]
-		col_max = mat.shape[1]
-
+		row_max = newMat.shape[0]
+		col_max = newMat.shape[1]
+		#pdb.set_trace()
 		# 補完するインデックスを取得
-		row, col = np.where(np.isnan(mat) == True)
+		row, col = np.where(np.isnan(newMat) == True)
 
 		# 補完
 		for i in range(row.shape[0]):
 			if(row[i] < 4 or (row_max - row[i]) <= 4 or col[i] < 4 or (col_max - col[i]) <= 4):
-				print("fill:{}, index:[{},{}]".format(i, row[i], col[i]))
 				# 端の欠損値は平均で補完
 				newMat = self.ave_complement(newMat, row[i], col[i])
 			else:
-				print("fill:{}, index:[{},{}]".format(i, row[i], col[i]))
 				# 中の欠損値はガウシアンで補完
 				newMat = self.gauss_complement(newMat, row[i], col[i])
 
@@ -170,13 +169,21 @@ class pre_processing:
 		print("success delete!!")
 
 		# 補完ターン
-		for j in range(1):
+		print("start complement")
+		# とりあえず今は高低左についてのみ処理をする
+		newMat = newData
+		newMat = self.complement(newMat)
+		newData = newMat
+		"""
+		for j in range(self.track_label.shape[0]):
 			# 積み木のi番目のスライスをもってくる
-			newMat = newData[j]
+			newMat = newData[j,:,:]
 			# 補完
 			newMat = self.complement(newMat)
 			# 補完済みのスライスを積み木に戻す
-			newData[j] = newMat
+			newData[j,:,:] = newMat
+		"""
+		print("success complement!!")
 
 		return newData
 	#------------------------------------
@@ -190,8 +197,8 @@ class pre_processing:
 		for i in range(data.shape[1]-2):
 			data_new = np.reshape(data.values.T[i+2],(365,27906))
 			reshaped_data.append(data_new)
-			print("",i)
-		pdb.set_trace()
+			#print("",i)
+		#pdb.set_trace()
 		numpy_data = np.array(reshaped_data)
 
 		return numpy_data
@@ -203,10 +210,14 @@ class pre_processing:
 		newData = self.missing_values(data)
 
 		# 目的変数は高低左
+		return newData
+		"""
+		あとで拡張する
 		x = np.delete(newData, 0, axis=0)
 		t = newData[0,:,:]
 
 		return x, t
+		"""
 	#------------------------------------
 
 	#------------------------------------
@@ -222,20 +233,25 @@ class pre_processing:
 	def get_divide_data(self, no, flag):
 		# flagでtrackかequipmentを分ける
 		if(flag == 0):
-			x, t = self.divide_track(self.track[no])
+			x = self.divide_track(self.track[no])
+			#あとで拡張する
+			#x, t = self.divide_track(self.track[no])
 			testInd = int(len(self.track[no]) * self.testPer)
 		elif(flag == 1):
-			x, t = self.divide_equipment(self.equipment[no])
+			x = self.divide_equipment(self.equipment[no])
+			#あとで拡張する
+			#x, t = self.divide_equipment(self.equipment[no])
 			testInd = int(len(self.equipment[no]) * self.testPer)
 
-		# trainデータに分ける
+		# trainデータはすべてのデータ
 		xTrain = x
-		tTrain = t
-		# testデータに分ける
-		xTest = x[:trainInd]
-		tTest = t[:trainInd]
-
-		return xTrain, tTrain, xTest, tTest
+		#tTrain = t
+		# testデータははじめの2割
+		xTest = x[:testInd]
+		#tTest = t[:testInd]
+		
+		return xTrain, xTest
+		#return xTrain, tTrain, xTest, tTest
 	#------------------------------------
 
 	#------------------------------------
@@ -253,31 +269,33 @@ class pre_processing:
 	# 前処理後のデータをバイナリファイルとして出力
 	def dump_data(self, no, flag):
 		# trainデータ、testデータを読み込む
-		xTrain, tTrain, xTest, tTest = self.get_divide_data(no, flag)
+		xTrain, xTest = self.get_divide_data(no, flag)
+		#あとで拡張する
+		#xTrain, tTrain, xTest, tTest = self.get_divide_data(no, flag)
 
 		# flagでtrackかequipmentを分ける
 		if(flag == 0):
 			# 名前付け
 			fname_xTrain = "track_xTrain_{}.binaryfile".format(no)
-			fname_tTrain = "track_tTrain_{}.binaryfile".format(no)
+			#fname_tTrain = "track_tTrain_{}.binaryfile".format(no)
 			fname_xTest = "track_xTest_{}.binaryfile".format(no)
-			fname_tTest = "track_tTest_{}.binaryfile".format(no)
+			#fname_tTest = "track_tTest_{}.binaryfile".format(no)
 			# 出力
 			self.dump_file(fname_xTrain, xTrain)
-			self.dump_file(fname_tTrain, tTrain)
+			#self.dump_file(fname_tTrain, tTrain)
 			self.dump_file(fname_xTest, xTest)
-			self.dump_file(fname_tTest, tTest)
+			#self.dump_file(fname_tTest, tTest)
 		elif(flag == 1):
 			# 名前付け
 			fname_xTrain = "equipment_xTrain_{}.binaryfile".format(no)
-			fname_tTrain = "equipment_tTrain_{}.binaryfile".format(no)
+			#fname_tTrain = "equipment_tTrain_{}.binaryfile".format(no)
 			fname_xTest = "equipment_xTest_{}.binaryfile".format(no)
-			fname_tTest = "equipment_tTest_{}.binaryfile".format(no)
+			#fname_tTest = "equipment_tTest_{}.binaryfile".format(no)
 			# 出力
 			self.dump_file(fname_xTrain, xTrain)
-			self.dump_file(fname_tTrain, tTrain)
+			#self.dump_file(fname_tTrain, tTrain)
 			self.dump_file(fname_xTest, xTest)
-			self.dump_file(fname_tTest, tTest)
+			#self.dump_file(fname_tTest, tTest)
 	#------------------------------------
 # pre_processingクラスの定義終わり
 #-------------------
