@@ -56,7 +56,7 @@ class Arima():
 
         ns_to_day = 86400000000000
         amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-        
+          
         #pdb.set_trace()
 
         self.t = self.tData[self.tData['date'] == '2018-3-31']
