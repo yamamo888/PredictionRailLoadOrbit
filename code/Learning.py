@@ -56,7 +56,7 @@ class Arima():
 
         ns_to_day = 86400000000000
         amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-        
+          
         #pdb.set_trace()
 
         self.t = self.tData[self.tData['date'] == '2018-3-31']
@@ -94,9 +94,11 @@ class Arima():
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
 
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
+        sigma_ar0 += 0.0000001 * np.eye(sigma_ar0.shape[0])
         sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
         self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
+        
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_ar :', k)
@@ -114,9 +116,11 @@ class Arima():
         z_ma1 = np.append(z_ma1, np.ones([z_ma1.shape[0],1]),axis=1)
 
         sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
+        sigma_ma0 += 0.0000001 * np.eye(sigma_ma0.shape[0])
         sigma_ma1 = np.matmul(z_ma1.T, e)
         w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
         self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
+        
         end_time = time.time() - start
         print("time_MA : {0}".format(end_time) + "[sec]")
         print('w_ma :', k)
@@ -229,6 +233,7 @@ if __name__ == "__main__":
     # ar_list = []
     ar_w_list = []
     ma_w_list = []
+    eps_list = []
 
     for no in range(len(fileind)):
         #pdb.set_trace()
@@ -241,10 +246,14 @@ if __name__ == "__main__":
         #pdb.set_trace()
         ar_w_list.append(arima.w_ar)
         ma_w_list.append(arima.w_ma)
+        eps_list.append(arima.eps)
 
     f_ar = open("ar_w_list.binaryfile","wb")
     f_ma = open("ma_w_list.binaryfile","wb")
+    f_eps = open("eps_list.binaryfile","wb")
     pickle.dump(ar_w_list,f_ar)
     pickle.dump(ma_w_list,f_ma)
+    pickle.dump(eps_list,f_ma)
     f_ar.close()
     f_ma.close()
+    f_eps.close()
