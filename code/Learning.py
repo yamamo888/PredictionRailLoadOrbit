@@ -98,6 +98,7 @@ class Arima():
         sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
         self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
+        
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_ar :', k)
@@ -119,6 +120,7 @@ class Arima():
         sigma_ma1 = np.matmul(z_ma1.T, e)
         w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
         self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
+        
         end_time = time.time() - start
         print("time_MA : {0}".format(end_time) + "[sec]")
         print('w_ma :', k)
@@ -231,10 +233,11 @@ if __name__ == "__main__":
     # ar_list = []
     ar_w_list = []
     ma_w_list = []
+    eps_list = []
 
     for no in range(len(fileind)):
         #pdb.set_trace()
-        arima = Arima(mytrackData.train_xData[no+1],mytrackData.train_tData[no+1])
+        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
         # ar_list.append(ar)
         arima.train()
         #arima.w_ar = arima.w_ar.tolist()
@@ -243,10 +246,14 @@ if __name__ == "__main__":
         #pdb.set_trace()
         ar_w_list.append(arima.w_ar)
         ma_w_list.append(arima.w_ma)
+        eps_list.append(arima.eps)
 
     f_ar = open("ar_w_list.binaryfile","wb")
     f_ma = open("ma_w_list.binaryfile","wb")
+    f_eps = open("eps_list.binaryfile","wb")
     pickle.dump(ar_w_list,f_ar)
     pickle.dump(ma_w_list,f_ma)
+    pickle.dump(eps_list,f_ma)
     f_ar.close()
     f_ma.close()
+    f_eps.close()
