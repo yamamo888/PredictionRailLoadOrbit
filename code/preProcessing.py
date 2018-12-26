@@ -16,8 +16,8 @@ class pre_processing:
 
 	#------------------------------------
 	def __init__(self):
-		# trainデータの割合
-		self.trainPer = 0.8
+		# testデータの割合
+		self.testPer = 0.2
 
 		# dateとキロ程を除いたtrackデータのラベル
 		self.track_label = np.array(["高低左", "高低右", "通り左", "通り右", "水準", "軌間", "速度"])
@@ -223,17 +223,17 @@ class pre_processing:
 		# flagでtrackかequipmentを分ける
 		if(flag == 0):
 			x, t = self.divide_track(self.track[no])
-			trainInd = int(len(self.track[no]) * self.trainPer)
+			testInd = int(len(self.track[no]) * self.testPer)
 		elif(flag == 1):
 			x, t = self.divide_equipment(self.equipment[no])
-			trainInd = int(len(self.equipment[no]) * self.trainPer)
+			testInd = int(len(self.equipment[no]) * self.testPer)
 
 		# trainデータに分ける
-		xTrain = x[:trainInd]
-		tTrain = t[:trainInd]
+		xTrain = x
+		tTrain = t
 		# testデータに分ける
-		xTest = x[trainInd:]
-		tTest = t[trainInd:]
+		xTest = x[:trainInd]
+		tTest = t[:trainInd]
 
 		return xTrain, tTrain, xTest, tTest
 	#------------------------------------
