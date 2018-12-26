@@ -69,7 +69,7 @@ class Arima():
         self.q = 12
         self.d = 1
 
-        self.krage_length = xData[xData["date"] = dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
+        self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
         self.w_ar = []
         self.w_ma = []
 
@@ -115,7 +115,7 @@ class Arima():
         for i in range(self.q):
             z_ma0 = []
             for j in range(self.N-self.d):
-                z_ma0.append(self.eps[(j+i+2):(j+i+3)][0])
+                z_ma0.append(self.kEps[(j+i+2):(j+i+3)][0])
             z_ma1.append(z_ma0)
 
         z_ma1 = np.array(z_ma1).T
@@ -150,7 +150,7 @@ class Arima():
             for i in range(self.N-self.d):
                 date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 if i == 0:
-                    y.append(float(self.kData[self.['date'] == date_y[-1]]['hll']))
+                    y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
                     e.append(self.kEps[i])
                 else:
                     y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
