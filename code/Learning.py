@@ -56,7 +56,7 @@ class Arima():
 
         ns_to_day = 86400000000000
         amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-          
+
         #pdb.set_trace()
 
         self.t = self.tData[self.tData['date'] == '2018-3-31']
@@ -67,10 +67,10 @@ class Arima():
         self.d = 1
 
         self.w_ar = []
-        self.w_ma = [] 
+        self.w_ma = []
 
         self.eps = [np.random.normal(1,25) for _ in range(amount)]
-     
+
     #------------------------------------------------------------
     # ARモデル :
     #   時系列データの目的変数のみで将来の予測を行う回帰
@@ -98,7 +98,7 @@ class Arima():
         sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
         self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
-        
+
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_ar :', k)
@@ -120,7 +120,7 @@ class Arima():
         sigma_ma1 = np.matmul(z_ma1.T, e)
         w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
         self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
-        
+
         end_time = time.time() - start
         print("time_MA : {0}".format(end_time) + "[sec]")
         print('w_ma :', k)
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     f_eps = open("eps_list.binaryfile","wb")
     pickle.dump(ar_w_list,f_ar)
     pickle.dump(ma_w_list,f_ma)
-    pickle.dump(eps_list,f_ma)
+    pickle.dump(eps_list,f_eps)
     f_ar.close()
     f_ma.close()
     f_eps.close()
