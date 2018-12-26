@@ -74,7 +74,7 @@ class pre_processing:
 
 		for row in range(nan_mat.shape[0]):
 			if(math.isnan(nan_mat[row][0]) == True):
-					list_nan = np.append(list_nan, i)
+					list_nan = np.append(list_nan, row)
 			elif(math.isnan(nan_mat[row][0]) == False):
 				if(list_nan.shape[0] >= 10):
 					list_del = np.append(list_del, list_nan)
@@ -92,7 +92,7 @@ class pre_processing:
 		list_nan = np.array([], dtype=int)
 		# 補完するNaNのリスト
 		list_fill = np.zeros((1, 2),dtype=int)
-		
+
 		# 同じキロ程ごとに違うdateをみていく
 		for col in range(mat.shape[1]):
 			for row in range(mat.shape[0]):
@@ -155,6 +155,8 @@ class pre_processing:
 		#newMat = self.shape_matrix(data, target)
 		newMat = mat
 
+		pdb.set_trace()
+
 		# 行、列のサイズを取得
 		row_max = mat.shape[0]
 		col_max = mat.shape[1]
@@ -183,6 +185,9 @@ class pre_processing:
 
 		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
+		# 反転
+		delete = delete[::-1]
+		
 		# 削除ターン
 		for i in range(delete.shape[0]):
 			newData = np.delete(newData, delete[i])
@@ -200,34 +205,20 @@ class pre_processing:
 		# 積み木の形で返す
 		return newData
 	#------------------------------------
-	
+
 	#------------------------------------
 	# データの型調整
 	def data_reshape(self,data):
-		new_data = np.array([])
-		
-		data = data.values
 
 		reshaped_data = []
 
-		for i in range(data.shape[1]):
-			
-			reshaped_data_parts = []
-			for j in range(data.T[i+2].shape[0]):
-				if j==0:
-					new_data = np.append(new_data,data.T[i+2][j])
-				elif data.T[1][j] < data.T[1][j-1]:
-					
-					reshaped_data_parts.append(new_data)
-				
-				else:
-					print("",j)
-					new_data = np.append(new_data,data.T[i+2][j])
-			reshaped_data.append(resahped_data_parts)
-		
-		#pdb.set_trace()
-		return reshaped_data
-					
+		for i in range(data.shape[1]-2):
+			data_new = np.reshape(data.values.T[i+2],(365,27906))
+			reshaped_data.append(data_new)
+			print("",i)
+		numpy_data = np.array(reshaped_data)
+
+		return numpy_data
 	#------------------------------------
 	# 説明変数と目的変数に分ける
 	def divide_track(self, data):
