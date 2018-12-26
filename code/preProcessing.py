@@ -107,8 +107,6 @@ class pre_processing:
 
 		return list_fill[1:,:]
 	#------------------------------------
-
-	#------------------------------------
 	# 欠損値を補完
 	# 平均からばらつきを考慮して補完
 	def ave_complement(self, mat, row, col):
@@ -155,7 +153,7 @@ class pre_processing:
 		#newMat = self.shape_matrix(data, target)
 		newMat = mat
 
-		pdb.set_trace()
+		#pdb.set_trace()
 
 		# 行、列のサイズを取得
 		row_max = mat.shape[0]
@@ -181,19 +179,24 @@ class pre_processing:
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		# 積み木の形にする
-		newData = self.data_reshape(data)
-
+		#newData = self.data_reshape(data)
 		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
 		# 反転
 		delete = delete[::-1]
-		
-		# 削除ターン
-		for i in range(delete.shape[0]):
-			newData = np.delete(newData, delete[i])
+		print("start reshape")
+		newData=np.reshape(data.values.T[2],(365,27906))
+		#pdb.set_trace()		
 
+		print("success reshape!!")
+		# 削除ターン
+		print("start delete")
+		for i in range(delete.shape[0]):
+			newData = np.delete(newData,delete[i],0)
+		print("success delete!!")
+		#pdb.set_trace()
 		# 補完ターン
-		for j in range(self.track_label.shape[0]):
+		for j in range(1):
 			# 積み木のi番目のスライスをもってくる
 			newMat = newData[j]
 			# 補完
@@ -216,6 +219,7 @@ class pre_processing:
 			data_new = np.reshape(data.values.T[i+2],(365,27906))
 			reshaped_data.append(data_new)
 			print("",i)
+		pdb.set_trace()
 		numpy_data = np.array(reshaped_data)
 
 		return numpy_data
