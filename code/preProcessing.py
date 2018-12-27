@@ -154,12 +154,18 @@ class pre_processing:
 	def missing_values(self, data):
 		# 積み木の形にする
 		#newData = self.data_reshape(data)
-		# 削除するインデックスを取得
+	# 削除するインデックスを取得
 		delete = self.get_del_index(data)
 		# 反転
 		delete = delete[::-1]
 		print("start reshape")
-		newData = np.reshape(data.values.T[2], (365, 27906))
+		#pdb.set_trace()
+		#pandas をnumpyに
+		numpy_data = data.values
+		
+		data_kiro = np.max(numpy_data.T[1])-np.min(numpy_data.T[1])+1			
+
+		newData = np.reshape(numpy_data.T[2], (int(numpy_data.shape[0]/data_kiro),data_kiro))
 		print("success reshape!!")
 
 		# 削除ターン
@@ -184,7 +190,7 @@ class pre_processing:
 			newData[j,:,:] = newMat
 		"""
 		print("success complement!!")
-
+		#pdb.set_trace()
 		return newData
 	#------------------------------------
 
