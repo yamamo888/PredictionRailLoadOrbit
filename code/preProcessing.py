@@ -266,7 +266,7 @@ class pre_processing:
 		# ファイルの出力先
 		fullpath = os.path.join(self.dataPath, filename)
 
-		f = open(fullpath, 'wb')
+		f = open('fullpath', 'wb')
 		pickle.dump(data, f)
 		f.close
 	#------------------------------------
