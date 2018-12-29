@@ -33,18 +33,21 @@ import concurrent.futures
 
 #------------------------------------------------------------
 # ARIMAモデルでの自己回帰 :
-#   ARモデルとMAモデルを
+#   ARモデルとMAモデルを融合させ、d階差時系列を採用したもの
 #   htitps://k-san.link/ar-process/を参照
 #
-# self.N    : 使用する日数
-# self.p    : 遡る日数(ARモデル)
-# self.q    : 遡る日数(MAモデル)
-# self.d    : d次階差時系列
-# self.w_ar : ARモデルでのパラメータ(重み)
-# self.w_ma : MAモデルでのパラメータ(重み)
-# self.eps  : MAモデルで使用するホワイトノイズ
-#self.kData : キロ程ごとのデータを格納する変数
-#self.kEps : キロ程ごとの誤差項を格納する変数
+# self.N     : 使用する日数
+# self.p     : 遡る日数(ARモデル)
+# self.q     : 遡る日数(MAモデル)
+# self.d     : d次階差時系列
+# self.w_ar  : ARモデルでのパラメータ(重み)
+# self.w_ma  : MAモデルでのパラメータ(重み)
+# self.eps   : MAモデルで使用するホワイトノイズ
+# self.kData : キロ程ごとのデータを格納する変数
+# self.kEps  : キロ程ごとの誤差項を格納する変数
+#
+# ns_to_day  : [ns]をdayに変換するための変数
+# amount     : 扱うデータの総日数(365日とか)
 #------------------------------------------------------------
 class Arima():
     def __init__(self,xData,tData):
@@ -57,6 +60,8 @@ class Arima():
         self.tNum = tData.shape[0]
 
         ns_to_day = 86400000000000
+        
+        # 秒を日にちに変換(86400 -> 1 みたいに)
         amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
 
         #pdb.set_trace()
@@ -66,7 +71,7 @@ class Arima():
         self.kEps = []
         self.N = 10
         self.p = 10
-        self.q = 12
+        self.q = 10
         self.d = 1
 
         self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
@@ -82,45 +87,85 @@ class Arima():
     #
     # z_ar0     : self.w_arを求めるためのZ行列の列の要素
     # z_ar1     : self.w_arを求めるためのZ行列
-    # date_ar   : z_ar0の要素
+    # date_ar   : z_ar0の１要素
+    #
+    # self.w_ar : (Z^T * Z + λI)^-1 * Z^T * y
     #------------------------------------------------------------
     def AR(self,y,k):
         start = time.time()
         date_ar = []
         z_ar1 = []
+        
+        #--------------------------------------------------
+        # ARモデルのパラメータを更新するための行列Zを導出
+        # htitps://k-san.link/ar-process/を参照
+        # このfor文の段階では p x (N-d) 行列
+        #--------------------------------------------------
         for i in range(self.p):
             z_ar0 = []
             for j in range(self.N-self.d):
+                # date_arにj+i+2日前の日にち(str型)を保存
                 date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                # date_atに保存されている日にちに対応するデータを列方向に追加
                 z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
+            # 行方向にz_ar0を追加しZ行列を生成
             z_ar1.append(z_ar0)
-
+        
+        # p x N -> N x p (Z行列はN x p)
         z_ar1 = np.array(z_ar1).T
+        # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
 
+        #-----------------------------------------------------------
+        # self.w_arの更新
+        #-----------------------------------------------------------  
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
+        # 逆行列を生成するためにλIを足す(対角成分にλを足す)
         sigma_ar0 += 0.0000001 * np.eye(sigma_ar0.shape[0])
         sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
-        self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1])
-
+        self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1]) 
+       
+        
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_ar :', k)
         print(self.w_ar)
 
+    #------------------------------------------------------------
+    # MAモデル :
+    #   ホワイトノイズ(ε)で将来の予測を行う回帰
+    #   self.N日のデータからself.p日遡って回帰を行う
+    #
+    # z_ma0     : self.w_maを求めるためのZ行列の列の要素
+    # z_ma1     : self.w_maを求めるためのZ行列
+    # date_ma   : z_ma0の１要素
+    #
+    # self.w_ma : (Z^T * Z + λI)^-1 * Z^T * y
+    #------------------------------------------------------------
     def MA(self,e,k):
         start = time.time()
         z_ma1 = []
+        
+        #--------------------------------------------------
+        # MAモデルのパラメータを更新するための行列Zを導出
+        # htitps://k-san.link/ar-process/を参照(ARモデルと基本同じ(多分))
+        # このfor文の段階では q x N 行列
+        #--------------------------------------------------
         for i in range(self.q):
             z_ma0 = []
             for j in range(self.N-self.d):
                 z_ma0.append(self.kEps[(j+i+2):(j+i+3)][0])
             z_ma1.append(z_ma0)
 
+        # p x N -> N x p (Z行列はN x p)
         z_ma1 = np.array(z_ma1).T
+        # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
         z_ma1 = np.append(z_ma1, np.ones([z_ma1.shape[0],1]),axis=1)
 
+        #-----------------------------------------------------------
+        # self.w_maの更新
+        #-----------------------------------------------------------  
         sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
         sigma_ma0 += 0.0000001 * np.eye(sigma_ma0.shape[0])
         sigma_ma1 = np.matmul(z_ma1.T, e)
@@ -134,11 +179,11 @@ class Arima():
 
     #------------------------------------------------------------
     # ARIMAモデルの学習
-    # date_ar :
-    # selfi.kData['hll'][self.k.index[0]]
+    # 
+    # y : 
     #------------------------------------------------------------
     def train(self):
-        start_all = time.time()
+        start_train = time.time()
         for k in range(self.krage_length):
             self.kData = self.tData[self.tData['krage']==10000+k]
             self.kEps = self.eps[:,k]
@@ -147,7 +192,7 @@ class Arima():
             y = []
             date_y = None
             e = []
-            pdb.set_trace()
+            #pdb.set_trace()
             for i in range(self.N-self.d):
                 date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 if i == 0:
@@ -169,7 +214,7 @@ class Arima():
             self.AR(y,k)
             self.MA(e,k)
 
-        end_time = time.time() - start_all
+        end_time = time.time() - start_train
         print("time : {0}".format(end_time) + "[sec]")
 
     def multi_train(self):
@@ -243,6 +288,7 @@ if __name__ == "__main__":
     ma_w_list = []
     eps_list = []
 
+    start_all = time.time()
     for no in range(len(fileind)):
         #pdb.set_trace()
         arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
@@ -255,6 +301,8 @@ if __name__ == "__main__":
         ar_w_list.append(arima.w_ar)
         ma_w_list.append(arima.w_ma)
         eps_list.append(arima.eps)
+    end_time = time.time() - start_all
+    print("time : {0}".format(end_time) + "[sec]")
 
     f_ar = open("ar_w_list.binaryfile","wb")
     f_ma = open("ma_w_list.binaryfile","wb")
