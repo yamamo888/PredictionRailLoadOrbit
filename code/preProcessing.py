@@ -5,18 +5,19 @@ import math
 import os
 #import matplotlib.pylab as plt   #折れ線グラフを作るやつ
 import matplotlib.pyplot as plt
+import pickle
 import pdb
 
 
 #-------------------
 # pre_processingクラスの定義定義始まり
 class pre_processing:
-	dataPath = '../data' # データが格納させているフォルダ名
+	dataPath = '../data' # データが格納されているフォルダ名
 
 	#------------------------------------
 	def __init__(self):
-		# trainデータの割合
-		self.trainPer = 0.8
+		# testデータの割合
+		self.testPer = 0.2
 
 		# dateとキロ程を除いたtrackデータのラベル
 		self.track_label = np.array(["高低左", "高低右", "通り左", "通り右", "水準", "軌間", "速度"])
@@ -74,7 +75,7 @@ class pre_processing:
 
 		for row in range(nan_mat.shape[0]):
 			if(math.isnan(nan_mat[row][0]) == True):
-					list_nan = np.append(list_nan, row)
+				list_nan = np.append(list_nan, row)
 			elif(math.isnan(nan_mat[row][0]) == False):
 				if(list_nan.shape[0] >= 10):
 					list_del = np.append(list_del, list_nan)
@@ -83,29 +84,6 @@ class pre_processing:
 					list_nan = np.array([], dtype=int)
 
 		return list_del
-	#------------------------------------
-
-	#------------------------------------
-	# 補完する欠損値のインデックスを取得
-	def get_fill_index(self, mat):
-		# NaNのインデックスリスト
-		list_nan = np.array([], dtype=int)
-		# 補完するNaNのリスト
-		list_fill = np.zeros((1, 2),dtype=int)
-
-		# 同じキロ程ごとに違うdateをみていく
-		for col in range(mat.shape[1]):
-			for row in range(mat.shape[0]):
-				if(math.isnan(mat[row][col]) == True):
-					list_nan = np.append(list_nan, [[row, col]], axis=0)
-				elif(math.isnan(mat[row][col]) == False):
-					if(0 < list_nan.shape[0] < 10):
-						list_fill = np.append(list_fill, list_nan, axis=0)
-						list_nan = np.zeros((1, 2), dtype=int)
-					else:
-						list_nan = np.zeros((1, 2), dtype=int)
-
-		return list_fill[1:,:]
 	#------------------------------------
 
 	#------------------------------------
@@ -118,9 +96,8 @@ class pre_processing:
 		ave = np.nanmean(kilo)
 		# 標準偏差
 		std = np.nanstd(kilo)
-
 		# 正規分布に従うとし標準偏差の範囲内でランダムに数字を作成
-		rnd = np.random.randint(ave - std, ave + std)
+		rnd = (ave - std) * np.random.rand() + ave + std
 		# 補完
 		mat[row][col] = rnd
 
@@ -138,8 +115,7 @@ class pre_processing:
 		# 全要素をNaNにする
 		data_mat = np.full_like(gauss, np.nan)
 		# matから値をもってくる
-		data_mat = mat[row-4:row+5][col-4:col+5]
-
+		data_mat = mat[row-4:row+5, col-4:col+5]
 		# 欠損値の予測
 		value = np.nansum(gauss * data_mat)
 		# 補完する
@@ -151,28 +127,24 @@ class pre_processing:
 	#------------------------------------
 	# インデックスで場合分けをして補完
 	def complement(self, mat):
-		# [date x キロ程]の行列を取得
-		#newMat = self.shape_matrix(data, target)
-		newMat = mat
-
-		pdb.set_trace()
+		# object型からfloat型にキャスト
+		newMat = mat.astype(float)
 
 		# 行、列のサイズを取得
-		row_max = mat.shape[0]
-		col_max = mat.shape[1]
-
+		row_max = newMat.shape[0]
+		col_max = newMat.shape[1]
+		#pdb.set_trace()
 		# 補完するインデックスを取得
-		fill = self.get_fill_index(mat)
+		row, col = np.where(np.isnan(newMat) == True)
 
 		# 補完
-		for i in range(fill.shape[0]):
-			row, col = fill[i]
-			# 端の欠損値は平均で補完
-			if(row < 4 | (row_max - row) < 4 | col < 4 | (col_max - col) < 4):
-				newMat = self.ave_complement(newMat, row, col)
-			# 中の欠損値はガウシアンで補完
+		for i in range(row.shape[0]):
+			if(row[i] < 4 or (row_max - row[i]) <= 4 or col[i] < 4 or (col_max - col[i]) <= 4):
+				# 端の欠損値は平均で補完
+				newMat = self.ave_complement(newMat, row[i], col[i])
 			else:
-				newMat = self.gauss_complement(newMat, row, col)
+				# 中の欠損値はガウシアンで補完
+				newMat = self.gauss_complement(newMat, row[i], col[i])
 
 		return newMat
 	#------------------------------------
@@ -181,28 +153,44 @@ class pre_processing:
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		# 積み木の形にする
-		newData = self.data_reshape(data)
-
-		# 削除するインデックスを取得
+		#newData = self.data_reshape(data)
+	# 削除するインデックスを取得
 		delete = self.get_del_index(data)
 		# 反転
 		delete = delete[::-1]
+		print("start reshape")
+		#pdb.set_trace()
+		#pandas をnumpyに
+		numpy_data = data.values
 		
+		data_kiro = np.max(numpy_data.T[1])-np.min(numpy_data.T[1])+1			
+
+		newData = np.reshape(numpy_data.T[2], (int(numpy_data.shape[0]/data_kiro),data_kiro))
+		print("success reshape!!")
+
 		# 削除ターン
+		print("start delete")
 		for i in range(delete.shape[0]):
-			newData = np.delete(newData, delete[i])
+			newData = np.delete(newData, delete[i], 0)
+		print("success delete!!")
 
 		# 補完ターン
+		print("start complement")
+		# とりあえず今は高低左についてのみ処理をする
+		newMat = newData
+		newMat = self.complement(newMat)
+		newData = newMat
+		"""
 		for j in range(self.track_label.shape[0]):
 			# 積み木のi番目のスライスをもってくる
-			newMat = newData[j]
+			newMat = newData[j,:,:]
 			# 補完
 			newMat = self.complement(newMat)
 			# 補完済みのスライスを積み木に戻す
-			newData[j] = newMat
-
-		pdb.set_trace()
-		# 積み木の形で返す
+			newData[j,:,:] = newMat
+		"""
+		print("success complement!!")
+		#pdb.set_trace()
 		return newData
 	#------------------------------------
 
@@ -215,20 +203,27 @@ class pre_processing:
 		for i in range(data.shape[1]-2):
 			data_new = np.reshape(data.values.T[i+2],(365,27906))
 			reshaped_data.append(data_new)
-			print("",i)
+			#print("",i)
+		#pdb.set_trace()
 		numpy_data = np.array(reshaped_data)
 
 		return numpy_data
+	#------------------------------------
+
 	#------------------------------------
 	# 説明変数と目的変数に分ける
 	def divide_track(self, data):
 		newData = self.missing_values(data)
 
 		# 目的変数は高低左
+		return newData
+		"""
+		あとで拡張する
 		x = np.delete(newData, 0, axis=0)
 		t = newData[0,:,:]
 
 		return x, t
+		"""
 	#------------------------------------
 
 	#------------------------------------
@@ -240,131 +235,87 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
-	# 今のところはtrackデータのみ使う
-	# trainデータを読み込む
-	def get_train_data(self, no, flag):
-		trainInd = {}
-		x = {}
-		t = {}
-		mat = {}
-		xTrain = {}
-		tTrain = {}
-		mat_train = {}
-
+	# trainデータとtestデータに分けて取得
+	def get_divide_data(self, no, flag):
+		# flagでtrackかequipmentを分ける
 		if(flag == 0):
-			x[no], t[no] = self.divide_track(self.track[no])
-			trainInd[no] = int(len(self.track[no]) * self.trainPer)
+			x = self.divide_track(self.track[no])
+			#あとで拡張する
+			#x, t = self.divide_track(self.track[no])
+			testInd = int(len(self.track[no]) * self.testPer)
 		elif(flag == 1):
-			x[no], t[no] = self.divide_equipment(self.equipment[no])
-			trainInd[no] = int(len(self.equipment[no]) * self.trainPer)
-		xTrain[no] = x[no][:trainInd[no]]
-		tTrain[no] = t[no][:trainInd[no]]
+			x = self.divide_equipment(self.equipment[no])
+			#あとで拡張する
+			#x, t = self.divide_equipment(self.equipment[no])
+			testInd = int(len(self.equipment[no]) * self.testPer)
 
-		return xTrain[no], tTrain[no]
+		# trainデータはすべてのデータ
+		xTrain = x
+		#tTrain = t
+		# testデータははじめの2割
+		xTest = x[:testInd]
+		#tTest = t[:testInd]
+		
+		return xTrain, xTest
+		#return xTrain, tTrain, xTest, tTest
 	#------------------------------------
 
 	#------------------------------------
-	# testデータを読み込む
-	def get_test_data(self, no):
-		trainInd = {}
-		x = {}
-		t = {}
-		mat = {}
-		xTest = {}
-		tTest = {}
-		mat_test = {}
+	# pickleでdumpする
+	def dump_file(self, filename, data):
+		# ファイルの出力先
+		fullpath = os.path.join(self.dataPath, filename)
 
-		if(flag == 0):
-			x[no], t[no] = self.divide_track(self.track[no])
-			mat[no] = self.track[no].groupby(["date", "キロ程"]).max()["高低左"].unstack().notnull().values
-			trainInd[no] = int(len(self.track[no]) * self.trainPer)
-		elif(flag == 1):
-			x[no], t[no] = self.divide_equipment(self.equipment[no])
-			trainInd[no] = int(len(self.equipment[no]) * self.trainPer)
-		#trainInd[no] = int(len(self.track[no])*self.trainPer)
-		xTest[no] = x[no][trainInd[no]:]
-		tTest[no] = t[no][trainInd[no]:]
-
-
-		return xTest[no], tTest[no]
-	#------------------------------------
-"""
-	#------------------------------------
-	def dump_file(self,filename,data):
-		f = open(filename,'wb')
-		pickle.dump(data,f)
+		f = open('fullpath', 'wb')
+		pickle.dump(data, f)
 		f.close
 	#------------------------------------
 
 	#------------------------------------
-	def dump_data(self):
-		fileind = ['A','B','C','D']
+	# 前処理後のデータをバイナリファイルとして出力
+	def dump_data(self, no, flag):
+		# trainデータ、testデータを読み込む
+		xTrain, xTest = self.get_divide_data(no, flag)
+		#あとで拡張する
+		#xTrain, tTrain, xTest, tTest = self.get_divide_data(no, flag)
 
-		for no in range(len(fileind)):
-			fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
-			# fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
-			fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
-			# fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
-
-			self.dump_file(fname_xTra, self.train_xData[no])
-			# self.dump_file(fname_xTes, self.test_xData[no])
-			self.dump_file(fname_tTra, self.train_tData[no])
-			# self.dump_file(fname_tTes, self.test_tData[no])
+		# flagでtrackかequipmentを分ける
+		if(flag == 0):
+			# 名前付け
+			fname_xTrain = "track_xTrain_{}.binaryfile".format(no)
+			#fname_tTrain = "track_tTrain_{}.binaryfile".format(no)
+			fname_xTest = "track_xTest_{}.binaryfile".format(no)
+			#fname_tTest = "track_tTest_{}.binaryfile".format(no)
+			# 出力
+			self.dump_file(fname_xTrain, xTrain)
+			#self.dump_file(fname_tTrain, tTrain)
+			self.dump_file(fname_xTest, xTest)
+			#self.dump_file(fname_tTest, tTest)
+		elif(flag == 1):
+			# 名前付け
+			fname_xTrain = "equipment_xTrain_{}.binaryfile".format(no)
+			#fname_tTrain = "equipment_tTrain_{}.binaryfile".format(no)
+			fname_xTest = "equipment_xTest_{}.binaryfile".format(no)
+			#fname_tTest = "equipment_tTest_{}.binaryfile".format(no)
+			# 出力
+			self.dump_file(fname_xTrain, xTrain)
+			#self.dump_file(fname_tTrain, tTrain)
+			self.dump_file(fname_xTest, xTest)
+			#self.dump_file(fname_tTest, tTest)
 	#------------------------------------
-"""
 # pre_processingクラスの定義終わり
 #-------------------
 
 #-------------------
 # メインの始まり
 if __name__ == "__main__":
-	xTrain= {}
-	tTrain = {}
-	xTest = {}
-	tTest = {}
-
-	xTrain_e = {}
-	tTrain_e = {}
-	xTest_e = {}
-	tTest_e = {}
-
+	# pre_processingクラスの呼び出し
 	myData = pre_processing()
 
 	for no in ['A', 'B', 'C', 'D']:
-		# trainデータについて
-		xTrain[no], tTrain[no]= myData.get_train_data(no, 0)
-		print("【xTrain_{}】\n{}\n".format(no, xTrain[no]))
-		print("【tTrain_{}】\n{}\n".format(no, tTrain[no]))
-		"""うまくいかない
-		# ファイル出力
-		# 説明変数
-		fname = "xTrain_{}.txt".format(no)
-		myData.file_output(fname, xTrain[no])
-		# 目的変数
-		fname = "tTrain_{}.txt".format(no)
-		myData.file_output(fname, tTrain[no])"""
-
-		# testデータについて
-		xTest[no], tTest[no] = myData.get_test_data(no, 0)
-		print("【xTest_{}】\n{}\n".format(no, xTest[no]))
-		print("【tTest_{}】\n{}\n".format(no, tTest[no]))
-		"""うまくいかない
-		# ファイル出力
-		# 説明変数
-		fname = "xTest_{}.txt".format(no)
-		myData.file_output(fname, xTest[no])
-		# 目的変数
-		fname = "tTest_{}.txt".format(no)
-		myData.file_output(fname, tTest[no])"""
-
-	for no in ['A','B','C','D']:
-		#trainデータについて
-		xTrain_e[no],tTrain[no] = myData.get_train_data(no, 1)
-		print("【xTrain_e{}】\n{}\n".format(no, xTrain[no]))
-		print("【tTrain_e{}】\n{}\n".format(no, xTrain[no]))
-
-		xTest_e[no],tTrain_e[no] = myData.get_test_data(no, 1)
-		print("【xTest_e{}】\n{}\n".format(no, xTest_e[no]))
-		print("【tTest_e{}】\n{}\n".format(no, xTest_e[no]))
+		# trackについて
+		myData.dump_data(no, 0)
+		# equipmentについて
+		myData.dump_data(no, 1)
 #メインの終わり
 #-------------------

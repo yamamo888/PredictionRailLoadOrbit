@@ -35,12 +35,13 @@ import pdb
 #self.p : 予測のためにさかのぼる日数
 #self.days : 入力データの総日数
 #self.krage_length : 入力データの総キロ数
-#
+#self.eps : 学習で使用したホワイトノイズ
 #------------------------------------
 class prediction():
-    def __init__(self,w_ar,w_ma,x,t):
+    def __init__(self,w_ar,w_ma,x,t,eps):
         self.p = 10
-        self.N = 50
+        self.q = 12
+        self.N = 10
         self.x = x
         self.t = t
 
@@ -52,9 +53,8 @@ class prediction():
         self.krage_length = int(self.xNum/self.days) #キロ程の総数
         self.w_ar = w_ar
         self.w_ma = w_ma
-        self.eps = [np.random.normal(1,25) for _ in range(365)]
+        self.eps = eps
         # self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
-
 
     def predict(self,day):
         #pdb.set_trace()
@@ -66,15 +66,13 @@ class prediction():
             y = np.append(y,self.t[self.t['date'] == date]['hll'])
 
         y = y.reshape([self.p,self.krage_length])
-
-        y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + np.matmul(self.w_ma, self.eps[1:self.p]) + self.eps[0]
-
+        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) + np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
         df = pd.DataFrame(y.T,columns=['hll'])
-
         #'date'をdfの末尾に追加
         df['date'] = day
+        df['krage'] = self.x[self.x['date']== self.x.iloc[0,:]['date']]['krage']
 
-        df = df.ix[:,['date','hll']] #'date','hll'の順番に並び替え
+        df = df.ix[:,['date','krage','hll']] #'date','hll'の順番に並び替え
 
         self.t = pd.concat([self.t,df])
         return self.t
@@ -96,24 +94,25 @@ class prediction():
 
 class trackData():
     def __init__(self):
-        self.ar_w_list = []
-        self.ma_w_list = []
+        self.ar_w_list = self.load_file("ar_w_list.binaryfile")
+        self.ma_w_list = self.load_file("ma_w_list.binaryfile")
+        self.eps_list = self.load_file("eps_list.binaryfile")
         self.xTrain_list = []
         self.tTrain_list = []
         self.fileind = ['A','B','C','D']
         self.fNum = len(self.fileind)
-        self.load_file("ar_w_list.binaryfile",self.ar_w_list)
-        self.load_file("ma_w_list.binaryfile",self.ma_w_list)
+
         for no in range(self.fNum):
             fname_xTra = "xTrain_{}.binaryfile".format(self.fileind[no])
             fname_tTra = "tTrain_{}.binaryfile".format(self.fileind[no])
-            self.load_file(fname_xTra,self.xTrain_list)
-            self.load_file(fname_tTra,self.tTrain_list)
+            self.xTrain_list.append(self.load_file(fname_xTra))
+            self.tTrain_list.append(self.load_file(fname_tTra))
 
-    def load_file(self,filename,data):
+    def load_file(self,filename):
         f = open(filename,'rb')
-        data.append(pickle.load(f))
+        result = pickle.load(f)
         f.close
+        return result
 
 
 if __name__ == "__main__":
@@ -130,7 +129,7 @@ if __name__ == "__main__":
     y = [] #予測した高低左(A~Dの４つ)を格納
 
     for j in range(fNum):
-        pre = prediction(myData.ar_w_list[j],myData.ma_w_list[j],myData.xTrain_list[j],myData.tTrain_list[j])
+        pre = prediction(myData.ar_w_list[j],myData.ma_w_list[j],myData.xTrain_list[j],myData.tTrain_list[j],myData.eps_list[j])
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
 
         for i in range(nite):
@@ -139,7 +138,6 @@ if __name__ == "__main__":
 
         out = pre.t.iloc[pre.xNum:]
         y.append(out)
-    # pre.showY(range(nite),y)
 
     for i in range(myData.fNum):
         fname = "output_{}.csv".format(myData.fileind[i])
