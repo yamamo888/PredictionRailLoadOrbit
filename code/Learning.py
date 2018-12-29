@@ -140,6 +140,7 @@ class Arima():
             y = []
             date_y = None
             e = []
+            pdb.set_trace()
             for i in range(self.N-self.d):
                 date_y = np.array((self.kDate['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 if i == 0:
