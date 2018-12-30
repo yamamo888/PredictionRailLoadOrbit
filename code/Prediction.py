@@ -33,57 +33,37 @@ import pdb
 #self.t : 高低左
 #self.w : 予測パラメータ
 #self.p : 予測のためにさかのぼる日数
+#self.q :
 #self.days : 入力データの総日数
 #self.krage_length : 入力データの総キロ数
 #self.eps : 学習で使用したホワイトノイズ
 #------------------------------------
 class prediction():
     def __init__(self,w_ar,w_ma,x,t,eps):
-        self.p = 10
-        self.q = 12
+        self.p = 3
+        self.q = 3
         self.N = 10
-        self.x = x
-        self.t = t
-
-        sdate = t.head(1)['date'].iat[0]
-        edate = t.tail(1)['date'].iat[0]
-
-        self.xNum = self.t.shape[0]
-        self.days = (edate - sdate + dt.timedelta(days=1)).days
-        self.krage_length = int(self.xNum/self.days) #キロ程の総数
+        self.x = x #xTrainデータ:hll以外
+        self.t = t #tTrainデータ:hll
+        self.days = self.x.shape[0] #日数
+        self.krage_length = self.x.shape[1] #キロ程の総数
         self.w_ar = w_ar
         self.w_ma = w_ma
         self.eps = eps
         # self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
     def predict(self,day):
-        #pdb.set_trace()
-        aDay = dt.timedelta(days=1)
-        y = []
-        tmp = []
-        for i in range(self.p):
-            date = day - aDay * (i+1)
-            y = np.append(y,self.t[self.t['date'] == date]['hll'])
+        y = self.t[-p:]
+        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+1],axis=0) + self.eps[0]
+        self.t = np.append(self.t,y,axis=0)
 
-        y = y.reshape([self.p,self.krage_length])
-        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
-        df = pd.DataFrame(y.T,columns=['hll'])
-        #'date'をdfの末尾に追加
-        df['date'] = day
-        df['krage'] = self.x[self.x['date']== self.x.iloc[0,:]['date']]['krage']
-
-        df = df.ix[:,['date','krage','hll']] #'date','hll'の順番に並び替え
-
-        self.t = pd.concat([self.t,df])
-        return self.t
-
-    def loss(self,tDate):
-        t = np.array(tDate['hll'])[np.newaxis]
-        pdb.set_trace()
-        #t = t[t['date'] == '2018-03-31']
-        num = pow(t - self.predict(tDate),2)
-        loss = np.sum(num) / (t.shape[1])
-        return loss
+    # def loss(self,tDate):
+    #     t = np.array(tDate['hll'])[np.newaxis]
+    #     pdb.set_trace()
+    #     #t = t[t['date'] == '2018-03-31']
+    #     num = pow(t - self.predict(tDate),2)
+    #     loss = np.sum(num) / (t.shape[1])
+    #     return loss
 
     def showY(self,x,y):
         plt.plot(x,y,'-o',color="0000FF")
@@ -118,29 +98,22 @@ class trackData():
 if __name__ == "__main__":
 
     myData=trackData() #Trainとwのリストを読み込む
-
-    aDay = dt.timedelta(days=1)
-    sDate = dt.datetime(2018,4,1,00,00,00)
-    eDate = dt.datetime(2018,6,30,00,00,00)
-
-    nite = (eDate-sDate + aDay).days #予測する日数(int)
-
+    nite = 91 #予測する日数
     fNum = myData.fNum #ファイルの数（A~Dの４つ）
     y = [] #予測した高低左(A~Dの４つ)を格納
 
     for j in range(fNum):
         pre = prediction(myData.ar_w_list[j],myData.ma_w_list[j],myData.xTrain_list[j],myData.tTrain_list[j],myData.eps_list[j])
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
-
-        for i in range(nite):
-            date = sDate + i*aDay
-            pre.predict(date)
-
-        out = pre.t.iloc[pre.xNum:]
+        for _ in range(nite):
+            pre.predict() #次の日を予測する
+        out = pd.DataFrame(pre.t[pre.days:])
         y.append(out)
 
-    for i in range(myData.fNum):
-        fname = "output_{}.csv".format(myData.fileind[i])
-        f = open(fname,"w")
-        y[i].to_csv(fname)
-        f.close
+    output = y[0]
+    for i in range(1,fNum):
+        output = pd.concat([output,y[i]],axis = 0)
+
+    f = open("output.csv","w")
+    output.to_csv(f)
+    f.close()
