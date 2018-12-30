@@ -4,9 +4,10 @@ import numpy as np
 import math
 import os
 #import matplotlib.pylab as plt   #折れ線グラフを作るやつ
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import pickle
 import pdb
+import time
 
 
 #-------------------
@@ -153,19 +154,19 @@ class pre_processing:
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
 		# 積み木の形にする
-		#newData = self.data_reshape(data)
-	# 削除するインデックスを取得
+		newData = self.data_reshape(data)
+		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
 		# 反転
 		delete = delete[::-1]
 		print("start reshape")
 		#pdb.set_trace()
-		#pandas をnumpyに
+		"""#pandas をnumpyに
 		numpy_data = data.values
 		
-		data_kiro = np.max(numpy_data.T[1])-np.min(numpy_data.T[1])+1			
+		data_kilo = np.max(numpy_data.T[1])-np.min(numpy_data.T[1])+1			
 
-		newData = np.reshape(numpy_data.T[2], (int(numpy_data.shape[0]/data_kiro),data_kiro))
+		newData = np.reshape(numpy_data.T[2], (int(numpy_data.shape[0]/data_kilo),data_kilo))"""
 		print("success reshape!!")
 
 		# 削除ターン
@@ -176,7 +177,7 @@ class pre_processing:
 
 		# 補完ターン
 		print("start complement")
-		# とりあえず今は高低左についてのみ処理をする
+		"""# とりあえず今は高低左についてのみ処理をする
 		newMat = newData
 		newMat = self.complement(newMat)
 		newData = newMat
@@ -188,7 +189,7 @@ class pre_processing:
 			newMat = self.complement(newMat)
 			# 補完済みのスライスを積み木に戻す
 			newData[j,:,:] = newMat
-		"""
+		
 		print("success complement!!")
 		#pdb.set_trace()
 		return newData
@@ -216,14 +217,13 @@ class pre_processing:
 		newData = self.missing_values(data)
 
 		# 目的変数は高低左
-		return newData
+		"""return newData
 		"""
-		あとで拡張する
+		# 高低左以外も扱えるように拡張
 		x = np.delete(newData, 0, axis=0)
 		t = newData[0,:,:]
 
 		return x, t
-		"""
 	#------------------------------------
 
 	#------------------------------------
@@ -239,25 +239,25 @@ class pre_processing:
 	def get_divide_data(self, no, flag):
 		# flagでtrackかequipmentを分ける
 		if(flag == 0):
-			x = self.divide_track(self.track[no])
-			#あとで拡張する
-			#x, t = self.divide_track(self.track[no])
+			#x = self.divide_track(self.track[no])
+			# 高低左以外も扱えるように拡張
+			x, t = self.divide_track(self.track[no])
 			testInd = int(len(self.track[no]) * self.testPer)
 		elif(flag == 1):
-			x = self.divide_equipment(self.equipment[no])
-			#あとで拡張する
-			#x, t = self.divide_equipment(self.equipment[no])
+			#x = self.divide_equipment(self.equipment[no])
+			# 高低左以外も扱えるように拡張
+			x, t = self.divide_equipment(self.equipment[no])
 			testInd = int(len(self.equipment[no]) * self.testPer)
 
 		# trainデータはすべてのデータ
 		xTrain = x
-		#tTrain = t
+		tTrain = t
 		# testデータははじめの2割
 		xTest = x[:testInd]
-		#tTest = t[:testInd]
+		tTest = t[:testInd]
 		
-		return xTrain, xTest
-		#return xTrain, tTrain, xTest, tTest
+		#return xTrain, xTest
+		return xTrain, tTrain, xTest, tTest
 	#------------------------------------
 
 	#------------------------------------
@@ -275,33 +275,35 @@ class pre_processing:
 	# 前処理後のデータをバイナリファイルとして出力
 	def dump_data(self, no, flag):
 		# trainデータ、testデータを読み込む
-		xTrain, xTest = self.get_divide_data(no, flag)
-		#あとで拡張する
-		#xTrain, tTrain, xTest, tTest = self.get_divide_data(no, flag)
+		#xTrain, xTest = self.get_divide_data(no, flag)
+		# 高低左以外も扱えるように拡張
+		xTrain, tTrain, xTest, tTest = self.get_divide_data(no, flag)
 
+		print("start dump")
 		# flagでtrackかequipmentを分ける
 		if(flag == 0):
 			# 名前付け
 			fname_xTrain = "track_xTrain_{}.binaryfile".format(no)
-			#fname_tTrain = "track_tTrain_{}.binaryfile".format(no)
+			fname_tTrain = "track_tTrain_{}.binaryfile".format(no)
 			fname_xTest = "track_xTest_{}.binaryfile".format(no)
-			#fname_tTest = "track_tTest_{}.binaryfile".format(no)
+			fname_tTest = "track_tTest_{}.binaryfile".format(no)
 			# 出力
 			self.dump_file(fname_xTrain, xTrain)
-			#self.dump_file(fname_tTrain, tTrain)
+			self.dump_file(fname_tTrain, tTrain)
 			self.dump_file(fname_xTest, xTest)
-			#self.dump_file(fname_tTest, tTest)
+			self.dump_file(fname_tTest, tTest)
 		elif(flag == 1):
 			# 名前付け
 			fname_xTrain = "equipment_xTrain_{}.binaryfile".format(no)
-			#fname_tTrain = "equipment_tTrain_{}.binaryfile".format(no)
+			fname_tTrain = "equipment_tTrain_{}.binaryfile".format(no)
 			fname_xTest = "equipment_xTest_{}.binaryfile".format(no)
-			#fname_tTest = "equipment_tTest_{}.binaryfile".format(no)
+			fname_tTest = "equipment_tTest_{}.binaryfile".format(no)
 			# 出力
 			self.dump_file(fname_xTrain, xTrain)
-			#self.dump_file(fname_tTrain, tTrain)
+			self.dump_file(fname_tTrain, tTrain)
 			self.dump_file(fname_xTest, xTest)
-			#self.dump_file(fname_tTest, tTest)
+			self.dump_file(fname_tTest, tTest)
+		print("success dump!!")
 	#------------------------------------
 # pre_processingクラスの定義終わり
 #-------------------
@@ -309,13 +311,19 @@ class pre_processing:
 #-------------------
 # メインの始まり
 if __name__ == "__main__":
+	start = time.time()
+
 	# pre_processingクラスの呼び出し
 	myData = pre_processing()
 
 	for no in ['A', 'B', 'C', 'D']:
+		print("Turn:{}".format(no))
 		# trackについて
 		myData.dump_data(no, 0)
 		# equipmentについて
 		myData.dump_data(no, 1)
+	
+	finish = time.time()
+	print("実行時間:{}".format(finish - start))
 #メインの終わり
 #-------------------
