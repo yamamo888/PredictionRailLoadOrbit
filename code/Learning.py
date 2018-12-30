@@ -48,7 +48,6 @@ import concurrent.futures
 #
 # ns_to_day  : [ns]をdayに変換するための変数
 # amount     : 扱うデータの総日数(365日とか)
-#------------------------------------------------------------
 class Arima():
     def __init__(self,xData,tData):
         self.xData = xData
@@ -90,7 +89,6 @@ class Arima():
     # date_ar   : z_ar0の１要素
     #
     # self.w_ar : (Z^T * Z + λI)^-1 * Z^T * y
-    #------------------------------------------------------------
     def AR(self,y,k):
         start = time.time()
         date_ar = []
@@ -99,8 +97,7 @@ class Arima():
         #--------------------------------------------------
         # ARモデルのパラメータを更新するための行列Zを導出
         # htitps://k-san.link/ar-process/を参照
-        # このfor文の段階では p x (N-d) 行列
-        #--------------------------------------------------
+        # for文の段階では p x (N-d) 行列
         for i in range(self.p):
             z_ar0 = []
             for j in range(self.N-self.d):
@@ -109,28 +106,30 @@ class Arima():
                 # date_atに保存されている日にちに対応するデータを列方向に追加
                 z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
             # 行方向にz_ar0を追加しZ行列を生成
-            z_ar1.append(z_ar0)
-        
-        # p x N -> N x p (Z行列はN x p)
+            z_ar1.append(z_ar0)        
+        # p x (N-d) -> (N-d) x p (Z行列はN x p)
         z_ar1 = np.array(z_ar1).T
         # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
+        #--------------------------------------------------
+
 
         #-----------------------------------------------------------
         # self.w_arの更新
-        #-----------------------------------------------------------  
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
         # 逆行列を生成するためにλIを足す(対角成分にλを足す)
         sigma_ar0 += 0.0000001 * np.eye(sigma_ar0.shape[0])
         sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
         self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1]) 
+        #-----------------------------------------------------------
        
         
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_ar :', k)
         print(self.w_ar)
+    #------------------------------------------------------------
 
     #------------------------------------------------------------
     # MAモデル :
@@ -142,46 +141,45 @@ class Arima():
     # date_ma   : z_ma0の１要素
     #
     # self.w_ma : (Z^T * Z + λI)^-1 * Z^T * y
-    #------------------------------------------------------------
     def MA(self,e,k):
         start = time.time()
         z_ma1 = []
         
-        #--------------------------------------------------
+        #-------------------------------------------------------------
         # MAモデルのパラメータを更新するための行列Zを導出
         # htitps://k-san.link/ar-process/を参照(ARモデルと基本同じ(多分))
-        # このfor文の段階では q x N 行列
-        #--------------------------------------------------
+        # このfor文の段階では q x (N-d) 行列
         for i in range(self.q):
             z_ma0 = []
             for j in range(self.N-self.d):
                 z_ma0.append(self.kEps[(j+i+2):(j+i+3)][0])
             z_ma1.append(z_ma0)
 
-        # p x N -> N x p (Z行列はN x p)
+        # p x (N-d) -> (N-d) x p (Z行列は(N-d) x p)
         z_ma1 = np.array(z_ma1).T
         # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
         z_ma1 = np.append(z_ma1, np.ones([z_ma1.shape[0],1]),axis=1)
+        #-------------------------------------------------------------
 
         #-----------------------------------------------------------
         # self.w_maの更新
-        #-----------------------------------------------------------  
         sigma_ma0 = np.matmul(z_ma1.T, z_ma1)
         sigma_ma0 += 0.0000001 * np.eye(sigma_ma0.shape[0])
         sigma_ma1 = np.matmul(z_ma1.T, e)
         w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
         self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
+        #-----------------------------------------------------------
 
         end_time = time.time() - start
         print("time_MA : {0}".format(end_time) + "[sec]")
         print('w_ma :', k)
         print(self.w_ma)
+    #------------------------------------------------------------
 
     #------------------------------------------------------------
     # ARIMAモデルの学習
     # 
     # y : 
-    #------------------------------------------------------------
     def train(self):
         start_train = time.time()
         for k in range(self.krage_length):
@@ -213,6 +211,7 @@ class Arima():
             #    executor.submit(self.MA,e,k)
             self.AR(y,k)
             self.MA(e,k)
+    #------------------------------------------------------------
 
         end_time = time.time() - start_train
         print("time : {0}".format(end_time) + "[sec]")
@@ -241,6 +240,7 @@ class Arima():
         num = pow(t - self.predict(tDate),2)
         loss = np.sum(num) / (t.shape[1])
         return loss
+#------------------------------------------------------------
 
 class trackData():
     def __init__(self):#trainの読み込み
