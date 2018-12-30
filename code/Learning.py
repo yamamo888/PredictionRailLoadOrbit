@@ -69,8 +69,8 @@ class Arima():
         self.kData = []
         self.kEps = []
         self.N = 10
-        self.p = 10
-        self.q = 10
+        self.p = 3
+        self.q = 3
         self.d = 1
 
         self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
