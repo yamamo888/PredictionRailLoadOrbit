@@ -66,7 +66,7 @@ class prediction():
             y = np.append(y,self.t[self.t['date'] == date]['hll'])
 
         y = y.reshape([self.p,self.krage_length])
-        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) + np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
+        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
         df = pd.DataFrame(y.T,columns=['hll'])
         #'date'をdfの末尾に追加
         df['date'] = day
