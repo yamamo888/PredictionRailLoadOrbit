@@ -106,6 +106,20 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
+	# 欠損値を補完
+	# 線形補間
+	def linear_complement(self, mat):
+		# pandasに変換
+		pd_mat = pd.DataFrame(mat)
+		# 補完
+		pd_mat = pd_mat.interpolate(limit_direction='both')
+		# numpyに変換
+		mat = pd_mat.values
+
+		return mat
+	#------------------------------------
+
+	#------------------------------------
 	# 欠損値を予測
 	# ガウシアンカーネルと協調フィルタリングの考え方を用いる
 	def gauss_complement(self, mat, row, col):
@@ -140,13 +154,12 @@ class pre_processing:
 
 		# 補完
 		for i in range(row.shape[0]):
-			if(row[i] < 4 or (row_max - row[i]) <= 4 or col[i] < 4 or (col_max - col[i]) <= 4):
-				# 端の欠損値は平均で補完
-				newMat = self.ave_complement(newMat, row[i], col[i])
-			else:
+			if(not(row[i] < 4 or (row_max - row[i]) <= 4 or col[i] < 4 or (col_max - col[i]) <= 4)):
 				# 中の欠損値はガウシアンで補完
 				newMat = self.gauss_complement(newMat, row[i], col[i])
 		print("",i)
+		# 端の値は線形補間
+		newMat = self.linear_complement(newMat)
 
 		return newMat
 	#------------------------------------
@@ -161,7 +174,6 @@ class pre_processing:
 		delete = self.get_del_index(data)
 		# 反転
 		delete = delete[::-1]
-		print("start reshape")
 		#pdb.set_trace()
 		
 		print("success reshape!!")
