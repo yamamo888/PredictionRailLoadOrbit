@@ -161,12 +161,12 @@ class pre_processing:
 		delete = delete[::-1]
 		print("start reshape")
 		#pdb.set_trace()
-		"""#pandas をnumpyに
+		#pandas をnumpyに
 		numpy_data = data.values
 		
 		data_kilo = np.max(numpy_data.T[1])-np.min(numpy_data.T[1])+1			
 
-		newData = np.reshape(numpy_data.T[2], (int(numpy_data.shape[0]/data_kilo),data_kilo))"""
+		newData = np.reshape(numpy_data.T[2], (int(numpy_data.shape[0]/data_kilo),data_kilo))
 		print("success reshape!!")
 
 		# 削除ターン
