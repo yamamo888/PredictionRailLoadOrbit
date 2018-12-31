@@ -146,6 +146,7 @@ class pre_processing:
 			else:
 				# 中の欠損値はガウシアンで補完
 				newMat = self.gauss_complement(newMat, row[i], col[i])
+		print("",i)
 
 		return newMat
 	#------------------------------------
@@ -164,11 +165,11 @@ class pre_processing:
 		#pdb.set_trace()
 		
 		print("success reshape!!")
-		pdb.set_trace()
+		#pdb.set_trace()
 		# 削除ターン
 		print("start delete")
 		for i in range(delete.shape[0]):
-			newData = np.delete(newData, delete[i], 0)
+			newData = np.delete(newData, delete[i], 1)
 		print("success delete!!")
 
 		# 補完ターン
