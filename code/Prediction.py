@@ -45,8 +45,8 @@ class prediction():
         self.N = 10
         self.x = x #xTrainデータ:hll以外
         self.t = t #tTrainデータ:hll
-        self.days = self.x.shape[0] #日数
-        self.krage_length = self.x.shape[1] #キロ程の総数
+        self.days = self.t.shape[0] #日数
+        self.krage_length = self.t.shape[1] #キロ程の総数
         self.w_ar = w_ar
         self.w_ma = w_ma
         self.eps = eps
@@ -83,8 +83,8 @@ class trackData():
         self.fNum = len(self.fileind)
 
         for no in range(self.fNum):
-            fname_xTra = "xTrain_{}.binaryfile".format(self.fileind[no])
-            fname_tTra = "tTrain_{}.binaryfile".format(self.fileind[no])
+            fname_xTra = "track_xTrain_{}.binaryfile".format(self.fileind[no])
+            fname_tTra = "track_tTrain_{}.binaryfile".format(self.fileind[no])
             self.xTrain_list.append(self.load_file(fname_xTra))
             self.tTrain_list.append(self.load_file(fname_tTra))
 
