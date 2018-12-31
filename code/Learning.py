@@ -49,9 +49,10 @@ import concurrent.futures
 # ns_to_day  : [ns]をdayに変換するための変数
 # amount     : 扱うデータの総日数(365日とか)
 class Arima():
-    def __init__(self,xData,tData):
+    def __init__(self,xData,tData,No):
         self.xData = xData
         self.tData = tData
+        self.No = no
 
         self.xDim = xData.shape[1]-1
         self.xNum = xData.shape[0]
@@ -61,8 +62,8 @@ class Arima():
         ns_to_day = 86400000000000
         
         # 秒を日にちに変換(86400 -> 1 みたいに)
-        amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-
+        #amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
+        amount = self.tData.shape[self.No].shape[0]
         #pdb.set_trace()
 
         self.t = self.tData[self.tData['date'] == '2018-3-31']
@@ -73,7 +74,8 @@ class Arima():
         self.q = 3
         self.d = 1
 
-        self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
+        #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
+        self.krage_length = self.tData.shape[self.No].shape[1]
         self.w_ar = []
         self.w_ma = []
 
@@ -102,9 +104,10 @@ class Arima():
             z_ar0 = []
             for j in range(self.N-self.d):
                 # date_arにj+i+2日前の日にち(str型)を保存
-                date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
+                #date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 # date_atに保存されている日にちに対応するデータを列方向に追加
-                z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
+                #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
+                z_ar0.append(float(self.kData[self.kData[self.No][j+i+2]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_ar1.append(z_ar0)        
         # p x (N-d) -> (N-d) x p (Z行列はN x p)
@@ -182,22 +185,26 @@ class Arima():
     # y : 
     def train(self):
         start_train = time.time()
+        pdb.set_trace()
         for k in range(self.krage_length):
-            self.kData = self.tData[self.tData['krage']==10000+k]
+            #self.kData = self.tData[self.tData['krage']==10000+k]
+            self.kData = self.tData[self.No][k]
             self.kEps = self.eps[:,k]
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
 
             y = []
             date_y = None
             e = []
-            #pdb.set_trace()
+            pdb.set_trace()
             for i in range(self.N-self.d):
-                date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 if i == 0:
-                    y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    y.append(float(self.kData[i+1]))
                     e.append(self.kEps[i])
                 else:
-                    y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    y.append(float(self.kData[i+1]))
                     y[i-1] = y[i-1] - y[i]
                     e.append(self.kEps[i])
                     e[i-1] = e[i-1] - e[i]
@@ -291,7 +298,7 @@ if __name__ == "__main__":
     start_all = time.time()
     for no in range(len(fileind)):
         #pdb.set_trace()
-        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
+        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no],no)
         # ar_list.append(ar)
         arima.train()
         #arima.w_ar = arima.w_ar.tolist()
