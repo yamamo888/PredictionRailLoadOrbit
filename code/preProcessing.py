@@ -153,6 +153,7 @@ class pre_processing:
 	#------------------------------------
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
+		print("start reshape")
 		# 積み木の形にする
 		newData = self.data_reshape(data)
 		# 削除するインデックスを取得
@@ -161,14 +162,9 @@ class pre_processing:
 		delete = delete[::-1]
 		print("start reshape")
 		#pdb.set_trace()
-		"""#pandas をnumpyに
-		numpy_data = data.values
 		
-		data_kilo = np.max(numpy_data.T[1])-np.min(numpy_data.T[1])+1			
-
-		newData = np.reshape(numpy_data.T[2], (int(numpy_data.shape[0]/data_kilo),data_kilo))"""
 		print("success reshape!!")
-
+		pdb.set_trace()
 		# 削除ターン
 		print("start delete")
 		for i in range(delete.shape[0]):
@@ -200,9 +196,14 @@ class pre_processing:
 	def data_reshape(self,data):
 
 		reshaped_data = []
+		
+		data_values = data.values		
 
 		for i in range(data.shape[1]-2):
-			data_new = np.reshape(data.values.T[i+2],(365,27906))
+			#pdb.set_trace()			
+			kiro = np.max(data_values.T[1])-np.min(data_values.T[1])+1
+			
+			data_new = np.reshape(data_values.T[i+2],(int(data_values.shape[0]/kiro),kiro))
 			reshaped_data.append(data_new)
 			#print("",i)
 		#pdb.set_trace()
