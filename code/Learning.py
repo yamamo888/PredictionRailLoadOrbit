@@ -185,14 +185,15 @@ class Arima():
     # y : 
     def train(self):
         start_train = time.time()
-        self.kData = self.tData[self.No]
-        self.kEps = self.eps[self.No]
         for k in range(self.krage_length):
             #self.kData = self.tData[self.tData['krage']==10000+k]
             #pdb.set_trace()
             #self.kData = self.tData[k]
             #self.kEps = self.eps[:,k]
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
+            self.kData = self.tData[:,k]
+            self.kEps = self.eps[:,k]
+            pdb.set_trace()
 
             y = []
             date_y = None
