@@ -49,19 +49,17 @@ import concurrent.futures
 # ns_to_day  : [ns]をdayに変換するための変数
 # amount     : 扱うデータの総日数(365日とか)
 class Arima():
-    def __init__(self,xData,tData,No):
+    def __init__(self,xData,tData):
         self.xData = xData
         self.tData = tData
-        self.No = no
 
         self.xDim = xData.shape[1]-1
         self.xNum = xData.shape[0]
 
         self.tNum = tData.shape[0]
 
-        ns_to_day = 86400000000000
-        
         # 秒を日にちに変換(86400 -> 1 みたいに)
+        #ns_to_day = 86400000000000
         #amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
         #pdb.set_trace()
         amount = self.tData.shape[0]
@@ -182,9 +180,14 @@ class Arima():
     #------------------------------------------------------------
     # ARIMAモデルの学習
     # 
-    # y : 
+    # y : 1 ~ N 日前の時系列データを格納した行列(ベクトル)
+    # e : 1 ~ N 日前のホワイトノイズを格納した行列(ベクトル)
     def train(self):
         start_train = time.time()
+        
+        #------------------------------------------------------------
+        # 各キロ程ごとの時系列データ(amount日分)を取得し、y・e 行列(ベクトル)を作成
+        # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
         for k in range(self.krage_length):
             #self.kData = self.tData[self.tData['krage']==10000+k]
             #pdb.set_trace()
@@ -194,12 +197,15 @@ class Arima():
             self.kData = self.tData[:,k]
             self.kEps = self.eps[:,k]
             #pdb.set_trace()
+            #date_y = None
 
             y = []
-            date_y = None
             e = []
             for i in range(self.N-self.d):
                 #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                #------------------------------------------------------------
+                # 1階差分の計算
+                # 1番目の要素は普通に計算、それ以降は一つ前の要素から引いたものをリストに格納
                 if i == 0:
                     #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
                     #pdb.set_trace()
@@ -211,16 +217,17 @@ class Arima():
                     y[i-1] = y[i-1] - y[i]
                     e.append(self.kEps[i])
                     e[i-1] = e[i-1] - e[i]
+                #------------------------------------------------------------
             y = np.array(y)[np.newaxis].T
             e = np.array(e)[np.newaxis].T
 
-            #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
-            #with concurrent.futures.ProcessPoolExecutor() as executor:
-            #    executor = concurrent.futures.ProcessPoolExecutor(max_workers=2)
-            #    executor.submit(self.AR,y,k)
-            #    executor.submit(self.MA,e,k)
+            #------------------------------------------------------------
+            # ARモデルとMAモデルの計算
             self.AR(y,k)
             self.MA(e,k)
+            #------------------------------------------------------------
+
+        #------------------------------------------------------------
 
         end_time = time.time() - start_train
         print("time : {0}".format(end_time) + "[sec]")
@@ -301,9 +308,10 @@ if __name__ == "__main__":
     eps_list = []
 
     start_all = time.time()
+    #pdb.set_trace()
     for no in range(len(fileind)):
         #pdb.set_trace()
-        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no],no)
+        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
         # ar_list.append(ar)
         arima.train()
         #arima.w_ar = arima.w_ar.tolist()
