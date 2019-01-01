@@ -35,6 +35,30 @@ class pre_processing:
 	#------------------------------------
 
 	#------------------------------------
+	# 四分位範囲をもとに外れ値をNaNにする
+	def outlier(self, data):
+		# dateとキロ程以外の列を処理する
+		for i in range(len(data.columns) - 2):
+			# 列の抽出
+			col = data.iloc[:, i+2]
+
+			# 四分位数
+			q1 = col.describe()['25%']
+			q3 = col.describe()['75%']
+			# 四分位範囲
+			iqr = q3 - q1
+			# 外れ値の基準
+			out_min = q1 - iqr * 1.5
+			out_max = q3 + iqr * 1.5
+
+			# 外れ値をNaNにする
+			col[col < out_min] = None
+			col[col < out_max] = None
+
+		return data
+	#------------------------------------
+
+	#------------------------------------
 	# [date x キロ程]で中身がtargetの行列を作成
 	def shape_matrix(self, data, target):
 		newMat = data.groupby(["date", "キロ程"]).max()[target].unstack().values
@@ -167,6 +191,11 @@ class pre_processing:
 	#------------------------------------
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
+		# 外れ値を処理
+		print("start outliers")
+		newData = self.outlier(data)
+		print("success outliers!!")
+
 		print("start reshape")
 		# 積み木の形にする
 		newData = self.data_reshape(data)
@@ -175,7 +204,6 @@ class pre_processing:
 		# 反転
 		delete = delete[::-1]
 		#pdb.set_trace()
-		
 		print("success reshape!!")
 		#pdb.set_trace()
 		# 削除ターン
