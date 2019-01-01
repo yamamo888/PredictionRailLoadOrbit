@@ -193,7 +193,7 @@ class Arima():
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
             self.kData = self.tData[:,k]
             self.kEps = self.eps[:,k]
-            pdb.set_trace()
+            #pdb.set_trace()
 
             y = []
             date_y = None
