@@ -63,10 +63,10 @@ class Arima():
         
         # 秒を日にちに変換(86400 -> 1 みたいに)
         #amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-        amount = self.tData.shape[self.No].shape[0]
         #pdb.set_trace()
+        amount = self.tData.shape[0]
 
-        self.t = self.tData[self.tData['date'] == '2018-3-31']
+        #self.t = self.tData[self.tData['date'] == '2018-3-31']
         self.kData = []
         self.kEps = []
         self.N = 10
@@ -75,7 +75,7 @@ class Arima():
         self.d = 1
 
         #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
-        self.krage_length = self.tData.shape[self.No].shape[1]
+        self.krage_length = self.tData.shape[1]
         self.w_ar = []
         self.w_ma = []
 
@@ -107,7 +107,7 @@ class Arima():
                 #date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 # date_atに保存されている日にちに対応するデータを列方向に追加
                 #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
-                z_ar0.append(float(self.kData[self.kData[self.No][j+i+2]))
+                z_ar0.append(float(self.kData[j+i+2]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_ar1.append(z_ar0)        
         # p x (N-d) -> (N-d) x p (Z行列はN x p)
@@ -185,21 +185,23 @@ class Arima():
     # y : 
     def train(self):
         start_train = time.time()
-        pdb.set_trace()
+        self.kData = self.tData[self.No]
+        self.kEps = self.eps[self.No]
         for k in range(self.krage_length):
             #self.kData = self.tData[self.tData['krage']==10000+k]
-            self.kData = self.tData[self.No][k]
-            self.kEps = self.eps[:,k]
+            #pdb.set_trace()
+            #self.kData = self.tData[k]
+            #self.kEps = self.eps[:,k]
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
 
             y = []
             date_y = None
             e = []
-            pdb.set_trace()
             for i in range(self.N-self.d):
                 #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 if i == 0:
                     #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    #pdb.set_trace()
                     y.append(float(self.kData[i+1]))
                     e.append(self.kEps[i])
                 else:
@@ -218,10 +220,10 @@ class Arima():
             #    executor.submit(self.MA,e,k)
             self.AR(y,k)
             self.MA(e,k)
-    #------------------------------------------------------------
 
         end_time = time.time() - start_train
         print("time : {0}".format(end_time) + "[sec]")
+    #------------------------------------------------------------
 
     def multi_train(self):
         with concurrent.futures.ProcessPoolExecutor(os.cpu_count()) as executor:
@@ -250,6 +252,7 @@ class Arima():
 #------------------------------------------------------------
 
 class trackData():
+    dataPath = '../data'
     def __init__(self):#trainの読み込み
 
         self.train_xData = []
@@ -260,9 +263,9 @@ class trackData():
         fileind = ['A','B','C','D']
 
         for no in range(len(fileind)):
-            fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
+            fname_xTra = "track_xTrain_{}.binaryfile".format(fileind[no])
             # fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
-            fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
+            fname_tTra = "track_tTrain_{}.binaryfile".format(fileind[no])
             # fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
 
             self.load_file(fname_xTra,self.train_xData)
@@ -272,7 +275,8 @@ class trackData():
 
 
     def load_file(self,filename,data):
-        f = open(filename,'rb')
+        fullpath = os.path.join(self.dataPath, filename)
+        f = open(fullpath,'rb')
         data.append(pickle.load(f))
         f.close
 
