@@ -219,7 +219,7 @@ class Arima():
             y = np.array(y[:self.N-self.d])[np.newaxis].T
             e = np.array(e[:self.N-self.d])[np.newaxis].T
 
-            pdb.set_trace()
+            #pdb.set_trace()
             #------------------------------------------------------------
             # ARモデルとMAモデルの計算
             self.AR(y,k)
