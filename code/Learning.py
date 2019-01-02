@@ -103,7 +103,7 @@ class Arima():
             for j in range(self.N-self.d):
                 # date_arにj+i+2日前の日にち(str型)を保存
                 #date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                # date_atに保存されている日にちに対応するデータを列方向に追加
+                # date_arに保存されている日にちに対応するデータを列方向に追加
                 #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
                 z_ar0.append(float(self.kData[j+i+2]))
             # 行方向にz_ar0を追加しZ行列を生成
@@ -195,12 +195,11 @@ class Arima():
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
             self.kData = self.tData[:,k]
             self.kEps = self.eps[:,k]
-            #pdb.set_trace()
             #date_y = None
 
             y = []
             e = []
-            for i in range(self.N-self.d):
+            for i in range(self.N):
                 #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 #------------------------------------------------------------
                 # 1階差分の計算
@@ -217,9 +216,10 @@ class Arima():
                     e.append(self.kEps[i])
                     e[i-1] = e[i-1] - e[i]
                 #------------------------------------------------------------
-            y = np.array(y)[np.newaxis].T
-            e = np.array(e)[np.newaxis].T
+            y = np.array(y[:self.N-self.d])[np.newaxis].T
+            e = np.array(e[:self.N-self.d])[np.newaxis].T
 
+            #pdb.set_trace()
             #------------------------------------------------------------
             # ARモデルとMAモデルの計算
             self.AR(y,k)
