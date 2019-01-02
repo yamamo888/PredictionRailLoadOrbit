@@ -8,7 +8,8 @@ import os
 import pickle
 import pdb
 import time
-
+from statistics import mean,variance
+from scipy import stats
 
 #-------------------
 # pre_processingクラスの定義定義始まり
@@ -33,7 +34,36 @@ class pre_processing:
 		for no in ['A', 'B', 'C', 'D']:
 			self.equipment[no] = pd.read_csv(os.path.join(self.dataPath, "equipment_{}.csv".format(no)))
 	#------------------------------------
+	#------------------------------------
+	#ホテリング理論
+	def hotelling_theory(self,data):	
 
+		anomaly_score=[]
+		
+		threshold = stats.chi2.interval(0.99,1)[1]		
+		
+		row = data.shape[1]
+		col = data.shape[2]
+		
+		for i in range(data.shape[0]):
+			mat = data[i].astype(float)
+		
+			mean = np.nanmean(mat)
+
+			var = np.nanvar(mat)
+			
+			anomaly_score_parts = np.array([])			
+
+			for x in data[i]:
+				y = (x - mean)**2/var
+				anomaly_score_parts=np.append(anomaly_score_parts,y)
+			
+			anomaly_score = np.reshape(anomaly_score_parts,(row,col))
+			
+			data[i][np.where(anomaly_score>threshold)]=np.nan
+		#pdb.set_trace()
+		
+		return data
 	#------------------------------------
 	# 四分位範囲をもとに外れ値をNaNにする
 	def outlier(self, data):
@@ -158,8 +188,7 @@ class pre_processing:
 		# 欠損値の予測
 		value = np.nansum(gauss * data_mat)
 		# 補完する
-		mat[row][col] = value
-
+		mat[row][col] = value	
 		return mat
 	#------------------------------------
 
@@ -191,20 +220,25 @@ class pre_processing:
 	#------------------------------------
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
+	  	#pattern1
 		# 外れ値を処理
-		print("start outliers")
-		newData = self.outlier(data)
-		print("success outliers!!")
+		#print("start outliers")
+		#pdb.set_trace()
+		#newData = self.outlier(data)
+		#print("success outliers!!")
 
 		print("start reshape")
 		# 積み木の形にする
 		newData = self.data_reshape(data)
+		print("success reshape!!")
 		# 削除するインデックスを取得
 		delete = self.get_del_index(data)
 		# 反転
 		delete = delete[::-1]
-		#pdb.set_trace()
-		print("success reshape!!")
+		print("start searching outliers")
+		#pattern2
+		newData = self.hotelling_theory(newData)
+		print("success outliers!!")
 		#pdb.set_trace()
 		# 削除ターン
 		print("start delete")
