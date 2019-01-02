@@ -49,24 +49,22 @@ import concurrent.futures
 # ns_to_day  : [ns]をdayに変換するための変数
 # amount     : 扱うデータの総日数(365日とか)
 class Arima():
-    def __init__(self,xData,tData,No):
+    def __init__(self,xData,tData):
         self.xData = xData
         self.tData = tData
-        self.No = no
 
         self.xDim = xData.shape[1]-1
         self.xNum = xData.shape[0]
 
         self.tNum = tData.shape[0]
 
-        ns_to_day = 86400000000000
-        
         # 秒を日にちに変換(86400 -> 1 みたいに)
+        #ns_to_day = 86400000000000
         #amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-        amount = self.tData.shape[self.No].shape[0]
         #pdb.set_trace()
+        amount = self.tData.shape[0]
 
-        self.t = self.tData[self.tData['date'] == '2018-3-31']
+        #self.t = self.tData[self.tData['date'] == '2018-3-31']
         self.kData = []
         self.kEps = []
         self.N = 10
@@ -75,7 +73,7 @@ class Arima():
         self.d = 1
 
         #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
-        self.krage_length = self.tData.shape[self.No].shape[1]
+        self.krage_length = self.tData.shape[1]
         self.w_ar = []
         self.w_ma = []
 
@@ -107,7 +105,7 @@ class Arima():
                 #date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 # date_atに保存されている日にちに対応するデータを列方向に追加
                 #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
-                z_ar0.append(float(self.kData[self.kData[self.No][j+i+2]))
+                z_ar0.append(float(self.kData[j+i+2]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_ar1.append(z_ar0)        
         # p x (N-d) -> (N-d) x p (Z行列はN x p)
@@ -182,24 +180,34 @@ class Arima():
     #------------------------------------------------------------
     # ARIMAモデルの学習
     # 
-    # y : 
+    # y : 1 ~ N 日前の時系列データを格納した行列(ベクトル)
+    # e : 1 ~ N 日前のホワイトノイズを格納した行列(ベクトル)
     def train(self):
         start_train = time.time()
-        pdb.set_trace()
+        #------------------------------------------------------------
+        # 各キロ程ごとの時系列データ(amount日分)を取得し、y・e 行列(ベクトル)を作成
+        # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
         for k in range(self.krage_length):
             #self.kData = self.tData[self.tData['krage']==10000+k]
-            self.kData = self.tData[self.No][k]
-            self.kEps = self.eps[:,k]
+            #pdb.set_trace()
+            #self.kData = self.tData[k]
+            #self.kEps = self.eps[:,k]
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
+            self.kData = self.tData[:,k]
+            self.kEps = self.eps[:,k]
+            #pdb.set_trace()
+            #date_y = None
 
             y = []
-            date_y = None
             e = []
-            pdb.set_trace()
             for i in range(self.N-self.d):
                 #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                #------------------------------------------------------------
+                # 1階差分の計算
+                # 1番目の要素は普通に計算、それ以降は一つ前の要素から引いたものをリストに格納
                 if i == 0:
                     #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    #pdb.set_trace()
                     y.append(float(self.kData[i+1]))
                     e.append(self.kEps[i])
                 else:
@@ -208,20 +216,21 @@ class Arima():
                     y[i-1] = y[i-1] - y[i]
                     e.append(self.kEps[i])
                     e[i-1] = e[i-1] - e[i]
+                #------------------------------------------------------------
             y = np.array(y)[np.newaxis].T
             e = np.array(e)[np.newaxis].T
 
-            #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
-            #with concurrent.futures.ProcessPoolExecutor() as executor:
-            #    executor = concurrent.futures.ProcessPoolExecutor(max_workers=2)
-            #    executor.submit(self.AR,y,k)
-            #    executor.submit(self.MA,e,k)
+            #------------------------------------------------------------
+            # ARモデルとMAモデルの計算
             self.AR(y,k)
             self.MA(e,k)
-    #------------------------------------------------------------
+            #------------------------------------------------------------
+
+        #------------------------------------------------------------
 
         end_time = time.time() - start_train
         print("time : {0}".format(end_time) + "[sec]")
+    #------------------------------------------------------------
 
     def multi_train(self):
         with concurrent.futures.ProcessPoolExecutor(os.cpu_count()) as executor:
@@ -250,6 +259,7 @@ class Arima():
 #------------------------------------------------------------
 
 class trackData():
+    dataPath = '../data'
     def __init__(self):#trainの読み込み
 
         self.train_xData = []
@@ -260,9 +270,9 @@ class trackData():
         fileind = ['A','B','C','D']
 
         for no in range(len(fileind)):
-            fname_xTra = "xTrain_{}.binaryfile".format(fileind[no])
+            fname_xTra = "track_xTrain_{}.binaryfile".format(fileind[no])
             # fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
-            fname_tTra = "tTrain_{}.binaryfile".format(fileind[no])
+            fname_tTra = "track_tTrain_{}.binaryfile".format(fileind[no])
             # fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
 
             self.load_file(fname_xTra,self.train_xData)
@@ -272,7 +282,8 @@ class trackData():
 
 
     def load_file(self,filename,data):
-        f = open(filename,'rb')
+        fullpath = os.path.join(self.dataPath, filename)
+        f = open(fullpath,'rb')
         data.append(pickle.load(f))
         f.close
 
@@ -296,9 +307,10 @@ if __name__ == "__main__":
     eps_list = []
 
     start_all = time.time()
+    #pdb.set_trace()
     for no in range(len(fileind)):
         #pdb.set_trace()
-        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no],no)
+        arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
         # ar_list.append(ar)
         arima.train()
         #arima.w_ar = arima.w_ar.tolist()
