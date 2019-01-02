@@ -108,7 +108,7 @@ if __name__ == "__main__":
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
         for _ in range(nite):
             pre.predict() #次の日を予測する
-        out = pd.DataFrame(pre.t[pre.days:])
+        out = pd.DataFrame(pre.t[pre.days:].reshape(1,pre.days*pre.krage_length))
         y.append(out)
 
     output = y[0]
