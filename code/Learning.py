@@ -77,7 +77,7 @@ class Arima():
         self.w_ar = []
         self.w_ma = []
 
-        self.eps = np.random.normal(1,25,(amount,self.krage_length))
+        self.eps = np.random.normal(1,4,(amount,self.krage_length))
 
     #------------------------------------------------------------
     # ARモデル :
@@ -122,7 +122,11 @@ class Arima():
         sigma_ar0 += 0.0000001 * np.eye(sigma_ar0.shape[0])
         sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
-        self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1]) 
+        #self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1]) 
+        if k == 0:
+            self.w_ar = np.append(self.w_ar, w_ar_buf)[np.newaxis].T 
+        else:
+            self.w_ar = np.append(self.w_ar, w_ar_buf, axis=1)
         #-----------------------------------------------------------
        
         
@@ -168,7 +172,11 @@ class Arima():
         sigma_ma0 += 0.0000001 * np.eye(sigma_ma0.shape[0])
         sigma_ma1 = np.matmul(z_ma1.T, e)
         w_ma_buf = np.matmul(np.linalg.inv(sigma_ma0), sigma_ma1)
-        self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
+        #self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
+        if k == 0:
+            self.w_ma = np.append(self.w_ma, w_ma_buf)[np.newaxis].T 
+        else:
+            self.w_ma = np.append(self.w_ma, w_ma_buf, axis=1)
         #-----------------------------------------------------------
 
         end_time = time.time() - start
@@ -219,7 +227,6 @@ class Arima():
             y = np.array(y[:self.N-self.d])[np.newaxis].T
             e = np.array(e[:self.N-self.d])[np.newaxis].T
 
-            #pdb.set_trace()
             #------------------------------------------------------------
             # ARモデルとMAモデルの計算
             self.AR(y,k)
