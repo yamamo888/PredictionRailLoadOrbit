@@ -53,8 +53,9 @@ class prediction():
         # self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
     def predict(self,day):
-        y = self.t[-p:]
+        y = self.t[-self.p:]
         y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+1],axis=0) + self.eps[0]
+        y = y.reshape(1,y.shape[0])
         self.t = np.append(self.t,y,axis=0)
 
     # def loss(self,tDate):
@@ -83,8 +84,8 @@ class trackData():
         self.fNum = len(self.fileind)
 
         for no in range(self.fNum):
-            fname_xTra = "track_xTrain_{}.binaryfile".format(self.fileind[no])
-            fname_tTra = "track_tTrain_{}.binaryfile".format(self.fileind[no])
+            fname_xTra = "../data/track_xTrain_{}.binaryfile".format(self.fileind[no])
+            fname_tTra = "../data/track_tTrain_{}.binaryfile".format(self.fileind[no])
             self.xTrain_list.append(self.load_file(fname_xTra))
             self.tTrain_list.append(self.load_file(fname_tTra))
 
@@ -107,7 +108,7 @@ if __name__ == "__main__":
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
         for _ in range(nite):
             pre.predict() #次の日を予測する
-        out = pd.DataFrame(pre.t[pre.days:])
+        out = pd.DataFrame(pre.t[pre.days:].reshape(1,pre.days*pre.krage_length))
         y.append(out)
 
     output = y[0]
