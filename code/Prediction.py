@@ -52,9 +52,9 @@ class prediction():
         self.eps = eps
         # self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
-    def predict(self,day):
+    def predict(self):
         y = self.t[-self.p:]
-        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+1],axis=0) + self.eps[0]
+        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
         y = y.reshape(1,y.shape[0])
         self.t = np.append(self.t,y,axis=0)
 
@@ -108,8 +108,9 @@ if __name__ == "__main__":
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
         for _ in range(nite):
             pre.predict() #次の日を予測する
-        out = pd.DataFrame(pre.t[pre.days:].reshape(1,pre.days*pre.krage_length))
-        y.append(out)
+        out = pre.t[pre.days:]
+        out = pd.DataFrame(out.reshape(out.shape[0]*out.shape[1],1))
+        y.append(out[:,1])
 
     output = y[0]
     for i in range(1,fNum):
