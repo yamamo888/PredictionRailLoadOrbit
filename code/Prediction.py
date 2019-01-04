@@ -40,9 +40,10 @@ import pdb
 #------------------------------------
 class prediction():
     def __init__(self,w_ar,w_ma,x,t,eps):
-        self.p = 3
-        self.q = 3
+        self.p = 10
+        self.q = 10
         self.N = 10
+        self.s = 91
         self.x = x #xTrainデータ:hll以外
         self.t = t #tTrainデータ:hll
         self.days = self.t.shape[0] #日数
@@ -52,9 +53,11 @@ class prediction():
         self.eps = eps
         # self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
-    def predict(self):
-        y = self.t[-self.p:]
-        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
+    def predict(self,nite):
+        y = self.t[-(self.p + self.s):-self.s]
+        #y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
+        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) + self.eps[0]
+        #pdb.set_trace()
         y = y.reshape(1,y.shape[0])
         self.t = np.append(self.t,y,axis=0)
 
@@ -106,13 +109,16 @@ if __name__ == "__main__":
     for j in range(fNum):
         pre = prediction(myData.ar_w_list[j],myData.ma_w_list[j],myData.xTrain_list[j],myData.tTrain_list[j],myData.eps_list[j])
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
-        for _ in range(nite):
-            pre.predict() #次の日を予測する
+        for n in range(nite):
+            pre.predict(n) #次の日を予測する
         out = pre.t[pre.days:]
         out = pd.DataFrame(out.reshape(out.shape[0]*out.shape[1],1))
-        y.append(out[:,1])
+        #pdb.set_trace()
+        #y.append(out[:,1])
+        y.append(out[:])
 
     output = y[0]
+    pdb.set_trace()
     for i in range(1,fNum):
         output = pd.concat([output,y[i]],axis = 0)
 

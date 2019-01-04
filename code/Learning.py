@@ -68,9 +68,10 @@ class Arima():
         self.kData = []
         self.kEps = []
         self.N = 10
-        self.p = 3
-        self.q = 3
+        self.p = 10
+        self.q = 10
         self.d = 1
+        self.s = 90
 
         #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
         self.krage_length = self.tData.shape[1]
@@ -100,12 +101,12 @@ class Arima():
         # for文の段階では p x (N-d) 行列
         for i in range(self.p):
             z_ar0 = []
-            for j in range(self.N-self.d):
+            for j in range(self.N):
                 # date_arにj+i+2日前の日にち(str型)を保存
                 #date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 # date_arに保存されている日にちに対応するデータを列方向に追加
                 #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
-                z_ar0.append(float(self.kData[j+i+2]))
+                z_ar0.append(float(self.kData[j+i+2+self.s]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_ar1.append(z_ar0)        
         # p x (N-d) -> (N-d) x p (Z行列はN x p)
@@ -113,8 +114,6 @@ class Arima():
         # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
         #--------------------------------------------------
-
-
         #-----------------------------------------------------------
         # self.w_arの更新
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
@@ -128,7 +127,6 @@ class Arima():
         else:
             self.w_ar = np.append(self.w_ar, w_ar_buf, axis=1)
         #-----------------------------------------------------------
-       
         
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
@@ -159,7 +157,6 @@ class Arima():
             for j in range(self.N-self.d):
                 z_ma0.append(self.kEps[(j+i+2):(j+i+3)][0])
             z_ma1.append(z_ma0)
-
         # p x (N-d) -> (N-d) x p (Z行列は(N-d) x p)
         z_ma1 = np.array(z_ma1).T
         # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
@@ -197,40 +194,25 @@ class Arima():
         # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
         for k in range(self.krage_length):
             #self.kData = self.tData[self.tData['krage']==10000+k]
-            #pdb.set_trace()
             #self.kData = self.tData[k]
             #self.kEps = self.eps[:,k]
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
             self.kData = self.tData[:,k]
             self.kEps = self.eps[:,k]
-            #date_y = None
 
             y = []
             e = []
             for i in range(self.N):
                 #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-                #------------------------------------------------------------
-                # 1階差分の計算
-                # 1番目の要素は普通に計算、それ以降は一つ前の要素から引いたものをリストに格納
-                if i == 0:
-                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
-                    #pdb.set_trace()
-                    y.append(float(self.kData[i+1]))
-                    e.append(self.kEps[i])
-                else:
-                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
-                    y.append(float(self.kData[i+1]))
-                    y[i-1] = y[i-1] - y[i]
-                    e.append(self.kEps[i])
-                    e[i-1] = e[i-1] - e[i]
-                #------------------------------------------------------------
-            y = np.array(y[:self.N-self.d])[np.newaxis].T
-            e = np.array(e[:self.N-self.d])[np.newaxis].T
+                y.append(float(self.kData[i+1+self.s]))
+                e.append(self.kEps[i])
+            y = np.array(y)[np.newaxis].T
+            e = np.array(e)[np.newaxis].T
 
             #------------------------------------------------------------
             # ARモデルとMAモデルの計算
             self.AR(y,k)
-            self.MA(e,k)
+            #self.MA(e,k)
             #------------------------------------------------------------
 
         #------------------------------------------------------------
@@ -308,34 +290,26 @@ if __name__ == "__main__":
     # T = tData[tData['date'] == '2018-03-31']
     # w_A = ar_A.train()
 
-    # ar_list = []
     ar_w_list = []
     ma_w_list = []
     eps_list = []
 
     start_all = time.time()
-    #pdb.set_trace()
     for no in range(len(fileind)):
-        #pdb.set_trace()
         arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
-        # ar_list.append(ar)
         arima.train()
-        #arima.w_ar = arima.w_ar.tolist()
-        #arima.w_ma = arima.w_ma.tolist()
-        #print(type(arima.w_ar))
-        #pdb.set_trace()
         ar_w_list.append(arima.w_ar)
-        ma_w_list.append(arima.w_ma)
+        #ma_w_list.append(arima.w_ma)
         eps_list.append(arima.eps)
     end_time = time.time() - start_all
     print("time : {0}".format(end_time) + "[sec]")
 
     f_ar = open("ar_w_list.binaryfile","wb")
-    f_ma = open("ma_w_list.binaryfile","wb")
+    #f_ma = open("ma_w_list.binaryfile","wb")
     f_eps = open("eps_list.binaryfile","wb")
     pickle.dump(ar_w_list,f_ar)
-    pickle.dump(ma_w_list,f_ma)
+    #pickle.dump(ma_w_list,f_ma)
     pickle.dump(eps_list,f_eps)
     f_ar.close()
-    f_ma.close()
+    #f_ma.close()
     f_eps.close()
