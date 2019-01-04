@@ -53,10 +53,10 @@ class prediction():
         self.eps = eps
         # self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
-    def predict(self,nite):
+    def predict(self):
         y = self.t[-(self.p + self.s):-self.s]
-        #y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
-        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) + self.eps[0]
+        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
+        #y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) + self.eps[0]
         #pdb.set_trace()
         y = y.reshape(1,y.shape[0])
         self.t = np.append(self.t,y,axis=0)
@@ -109,8 +109,8 @@ if __name__ == "__main__":
     for j in range(fNum):
         pre = prediction(myData.ar_w_list[j],myData.ma_w_list[j],myData.xTrain_list[j],myData.tTrain_list[j],myData.eps_list[j])
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
-        for n in range(nite):
-            pre.predict(n) #次の日を予測する
+        for _ in range(nite):
+            pre.predict() #次の日を予測する
         out = pre.t[pre.days:]
         out = pd.DataFrame(out.reshape(out.shape[0]*out.shape[1],1))
         #pdb.set_trace()
