@@ -66,10 +66,9 @@ class Arima():
 
         #self.t = self.tData[self.tData['date'] == '2018-3-31']
         self.kData = []
-        self.kEps = []
         self.N = 10
         self.p = 10
-        self.s = 90
+        self.s = 91
 
         #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
         self.krage_length = self.tData.shape[1]
@@ -135,7 +134,6 @@ class Arima():
     # ARIMAモデルの学習
     # 
     # y : 1 ~ N 日前の時系列データを格納した行列(ベクトル)
-    # e : 1 ~ N 日前のホワイトノイズを格納した行列(ベクトル)
     def train(self):
         start_train = time.time()
         #------------------------------------------------------------
@@ -147,21 +145,16 @@ class Arima():
             #self.kEps = self.eps[:,k]
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
             self.kData = self.tData[:,k]
-            self.kEps = self.eps[:,k]
 
             y = []
-            e = []
             for i in range(self.N):
                 #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 y.append(float(self.kData[i+1+self.s]))
-                e.append(self.kEps[i])
             y = np.array(y)[np.newaxis].T
-            e = np.array(e)[np.newaxis].T
 
             #------------------------------------------------------------
             # ARモデルとMAモデルの計算
             self.AR(y,k)
-            #self.MA(e,k)
             #------------------------------------------------------------
 
         #------------------------------------------------------------
@@ -216,20 +209,15 @@ if __name__ == "__main__":
     # w_A = ar_A.train()
 
     ar_w_list = []
-    eps_list = []
 
     start_all = time.time()
     for no in range(len(fileind)):
         arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
         arima.train()
         ar_w_list.append(arima.w_ar)
-        eps_list.append(arima.eps)
     end_time = time.time() - start_all
     print("time : {0}".format(end_time) + "[sec]")
 
     f_ar = open("ar_w_list.binaryfile","wb")
-    f_eps = open("eps_list.binaryfile","wb")
     pickle.dump(ar_w_list,f_ar)
-    pickle.dump(eps_list,f_eps)
     f_ar.close()
-    f_eps.close()
