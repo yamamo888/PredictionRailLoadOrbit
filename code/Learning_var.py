@@ -65,7 +65,7 @@ class Arima():
         #pdb.set_trace()
         amount = self.tData.shape[0]
 
-        self.rData = xData[0]
+        self.right = xData[0]
 
         #self.t = self.tData[self.tData['date'] == '2018-3-31']
         self.kData = []
@@ -76,6 +76,7 @@ class Arima():
         #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
         self.krage_length = self.tData.shape[1]
         self.w_l_var = []
+        self.w_r_var = []
 
         self.eps = np.random.normal(1,4,(amount,self.krage_length))
 
@@ -89,7 +90,7 @@ class Arima():
     # date_ar   : z_ar0の１要素
     #
     # self.w_ar : (Z^T * Z + λI)^-1 * Z^T * y
-    def VAR(self,y,k):
+    def VAR(self,y_l,y_r,k):
         start = time.time()
         z_l_var1 = []
         z_r_var1 = []
@@ -124,8 +125,8 @@ class Arima():
         sigma_l_var0 += 0.0000001 * np.eye(sigma_l_var0.shape[0])
         sigma_r_var0 += 0.0000001 * np.eye(sigma_r_var0.shape[0])
 
-        sigma_l_var1 = np.matmul(z_l_var1.T, y)
-        sigma_r_var1 = np.matmul(z_r_var1.T, y)
+        sigma_l_var1 = np.matmul(z_l_var1.T, y_l)
+        sigma_r_var1 = np.matmul(z_r_var1.T, y_r)
         
         w_l_var_buf = np.matmul(np.linalg.inv(sigma_l_var0), sigma_l_var1)
         w_r_var_buf = np.matmul(np.linalg.inv(sigma_r_var0), sigma_r_var1)
@@ -140,8 +141,10 @@ class Arima():
         
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
+        print('w_r_var :', k)
+        print(self.w_r_var)
         print('w_l_var :', k)
-        print(self.w_ar)
+        print(self.w_l_var)
     #------------------------------------------------------------
 
     #------------------------------------------------------------
@@ -159,16 +162,20 @@ class Arima():
             #self.kEps = self.eps[:,k]
             #self.k = self.kData[self.kData['date'] == '2018-03-31']
             self.kData = self.tData[:,k]
+            self.rData = self.right[:,k]
 
-            y = []
+            y_l = []
+            y_r = []
             for i in range(self.N):
                 #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-                y.append(float(self.kData[i+1+self.s]))
-            y = np.array(y)[np.newaxis].T
+                y_l.append(float(self.kData[i+1+self.s]))
+                y_r.append(float(self.kData[i+1+self.s]))
+            y_l = np.array(y_l)[np.newaxis].T
+            y_r = np.array(y_r)[np.newaxis].T
 
             #------------------------------------------------------------
             # ARモデルとMAモデルの計算
-            self.VAR(y,k)
+            self.VAR(y_l,y_r,k)
             #------------------------------------------------------------
 
         #------------------------------------------------------------
@@ -222,16 +229,21 @@ if __name__ == "__main__":
     # T = tData[tData['date'] == '2018-03-31']
     # w_A = ar_A.train()
 
-    ar_w_list = []
+    w_l_var_list = []
+    w_r_var_list = []
 
     start_all = time.time()
     for no in range(len(fileind)):
         arima = Arima(mytrackData.train_xData[no],mytrackData.train_tData[no])
         arima.train()
-        ar_w_list.append(arima.w_ar)
+        w_l_var_list.append(arima.w_l_var)
+        w_r_var_list.append(arima.w_r_var)
     end_time = time.time() - start_all
     print("time : {0}".format(end_time) + "[sec]")
 
-    f_ar = open("ar_w_list.binaryfile","wb")
-    pickle.dump(ar_w_list,f_ar)
-    f_ar.close()
+    f_l_var = open("w_l_var_list.binaryfile","wb")
+    f_r_var = open("w_r_var_list.binaryfile","wb")
+    pickle.dump(w_l_var_list,f_l_var)
+    pickle.dump(w_r_var_list,f_r_var)
+    f_l_var.close()
+    f_r_var.close()
