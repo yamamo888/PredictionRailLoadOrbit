@@ -1,0 +1,397 @@
+#-*- coding: utf-8 -*-
+"""
+Created on Fri Oct 12 12:25:31 2018
+
+@author: yu
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Oct  4 09:42:54 2018
+
+@author: yu
+"""
+
+import numpy as np
+import pandas as pd
+#import tensorflow as tf
+import os
+import datetime as dt
+import heapq
+import pickle
+import matplotlib as mpl
+mpl.use('Agg')
+
+import matplotlib.pylab as plt
+
+import datetime
+import time
+
+import pdb
+
+import concurrent.futures
+
+#------------------------------------------------------------
+# ARIMAモデルでの自己回帰 :
+#   ARモデルとMAモデルを融合させ、d階差時系列を採用したもの
+#   htitps://k-san.link/ar-process/を参照
+#
+# self.N     : 使用する日数
+# self.p     : 遡る日数(ARモデル)
+# self.q     : 遡る日数(MAモデル)
+# self.d     : d次階差時系列
+# self.w_ar  : ARモデルでのパラメータ(重み)
+# self.w_ma  : MAモデルでのパラメータ(重み)
+# self.eps   : MAモデルで使用するホワイトノイズ
+# self.kData : キロ程ごとのデータを格納する変数
+# self.kEps  : キロ程ごとの誤差項を格納する変数
+#
+# ns_to_day  : [ns]をdayに変換するための変数
+# amount     : 扱うデータの総日数(365日とか)
+class Varima():
+    def __init__(self,xData,tData):
+        self.xData = xData
+        self.tData = tData
+
+        self.xDim = xData.shape[1]-1
+        self.xNum = xData.shape[0]
+
+        self.tNum = tData.shape[0]
+
+        # 秒を日にちに変換(86400 -> 1 みたいに)
+        #ns_to_day = 86400000000000
+        #amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
+        #pdb.set_trace()
+        amount = self.tData.shape[0]
+
+        self.right = xData[0]
+
+        #self.t = self.tData[self.tData['date'] == '2018-3-31']
+        self.kData = []
+        self.k_lEps = []
+        self.k_rEps = []
+        self.N = 10
+        self.p = 10
+        self.q = 10
+        self.d = 1
+        self.s = 91
+
+        #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
+        self.krage_length = self.tData.shape[1]
+        
+        self.w_l_var = []
+        self.w_r_var = []
+
+        self.w_l_vma = []
+        self.w_r_vma = []
+        
+        self.eps_r = np.random.normal(1,4,(amount,self.krage_length))
+        self.eps_l = np.random.normal(1,4,(amount,self.krage_length))
+
+    #------------------------------------------------------------
+    # ARモデル :
+    #   時系列データの目的変数のみで将来の予測を行う回帰
+    #   self.N日のデータからself.p日遡って回帰を行う
+    #
+    # z_ar0     : self.w_arを求めるためのZ行列の列の要素
+    # z_ar1     : self.w_arを求めるためのZ行列
+    # date_ar   : z_ar0の１要素
+    #
+    # self.w_ar : (Z^T * Z + λI)^-1 * Z^T * y
+    def VAR(self,y_l,y_r,k):
+        start = time.time()
+        z_l_var1 = []
+        z_r_var1 = []
+        
+        #--------------------------------------------------
+        # ARモデルのパラメータを更新するための行列Zを導出
+        # htitps://k-san.link/ar-process/を参照
+        # for文の段階では p x (N-d) 行列
+        for i in range(self.p):
+            z_l_var0 = []
+            z_r_var0 = []
+            for j in range(self.N-self.d):
+                # z_l_var0にj+i+2日前のデータを格納
+                z_l_var0.append(float(self.kData[j+i+2+self.s]))
+                z_r_var0.append(float(self.rData[j+i+2+self.s]))
+            # 行方向にz_ar0を追加しZ行列を生成
+            z_l_var1.append(z_l_var0)
+            z_r_var1.append(z_r_var0)
+        # p x (N-d) -> (N-d) x p (Z行列はN x p)
+        z_l_var1 = np.array(z_l_var1).T
+        z_r_var1 = np.array(z_r_var1).T
+        # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
+        z_l_var1 = np.append(z_l_var1, np.ones([z_l_var1.shape[0],1]),axis=1)
+        z_r_var1 = np.append(z_r_var1, np.ones([z_r_var1.shape[0],1]),axis=1)
+        #--------------------------------------------------
+
+        #-----------------------------------------------------------
+        # self.w_arの更新
+        sigma_l_var0 = np.matmul(z_l_var1.T, z_l_var1)
+        sigma_r_var0 = np.matmul(z_r_var1.T, z_r_var1)
+        # 逆行列を生成するためにλIを足す(対角成分にλを足す)
+        sigma_l_var0 += 0.0000001 * np.eye(sigma_l_var0.shape[0])
+        sigma_r_var0 += 0.0000001 * np.eye(sigma_r_var0.shape[0])
+
+        sigma_l_var1 = np.matmul(z_l_var1.T, y_l)
+        sigma_r_var1 = np.matmul(z_r_var1.T, y_r)
+        
+        w_l_var_buf = np.matmul(np.linalg.inv(sigma_l_var0), sigma_l_var1)
+        w_r_var_buf = np.matmul(np.linalg.inv(sigma_r_var0), sigma_r_var1)
+        #self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1]) 
+        if k == 0:
+            self.w_l_var = np.append(self.w_l_var, w_l_var_buf)[np.newaxis].T 
+            self.w_r_var = np.append(self.w_r_var, w_r_var_buf)[np.newaxis].T 
+        else:
+            self.w_l_var = np.append(self.w_l_var, w_l_var_buf, axis=1)
+            self.w_r_var = np.append(self.w_r_var, w_r_var_buf, axis=1)
+        #-----------------------------------------------------------
+        
+        end_time = time.time() - start
+        print("time_AR : {0}".format(end_time) + "[sec]")
+        #print('w_r_var :', k)
+        #print(self.w_r_var)
+        #print('w_l_var :', k)
+        #print(self.w_l_var)
+    #------------------------------------------------------------
+
+    #------------------------------------------------------------
+    # MAモデル :
+    #   ホワイトノイズ(ε)で将来の予測を行う回帰
+    #   self.N日のデータからself.p日遡って回帰を行う
+    #
+    # z_ma0     : self.w_maを求めるためのZ行列の列の要素
+    # z_ma1     : self.w_maを求めるためのZ行列
+    # date_ma   : z_ma0の１要素
+    #
+    # self.w_ma : (Z^T * Z + λI)^-1 * Z^T * y
+    def VMA(self,e_l,e_r,k):
+        start = time.time()
+        z_l_vma1 = []
+        z_r_vma1 = []
+        
+        #-------------------------------------------------------------
+        # MAモデルのパラメータを更新するための行列Zを導出
+        # htitps://k-san.link/ar-process/を参照(ARモデルと基本同じ(多分))
+        # このfor文の段階では q x (N-d) 行列
+        for i in range(self.q):
+            z_l_vma0 = []
+            z_r_vma0 = []
+            for j in range(self.N-self.d):
+                z_l_vma0.append(self.k_lEps[(j+i+2+self.s):(j+i+3+self.s)][0])
+                z_r_vma0.append(self.k_rEps[(j+i+2+self.s):(j+i+3+self.s)][0])
+            z_l_vma1.append(z_l_vma0)
+            z_r_vma1.append(z_r_vma0)
+        # p x (N-d) -> (N-d) x p (Z行列は(N-d) x p)
+        z_l_vma1 = np.array(z_l_vma1).T
+        z_r_vma1 = np.array(z_r_vma1).T
+        # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
+        z_l_vma1 = np.append(z_l_vma1, np.ones([z_l_vma1.shape[0],1]),axis=1)
+        z_r_vma1 = np.append(z_r_vma1, np.ones([z_r_vma1.shape[0],1]),axis=1)
+        #-------------------------------------------------------------
+
+        #-----------------------------------------------------------
+        # self.w_maの更新
+        sigma_l_vma0 = np.matmul(z_l_vma1.T, z_l_vma1)
+        sigma_r_vma0 = np.matmul(z_r_vma1.T, z_r_vma1)
+        sigma_l_vma0 += 0.0000001 * np.eye(sigma_l_vma0.shape[0])
+        sigma_r_vma0 += 0.0000001 * np.eye(sigma_r_vma0.shape[0])
+        sigma_l_vma1 = np.matmul(z_l_vma1.T, e_l)
+        sigma_r_vma1 = np.matmul(z_r_vma1.T, e_r)
+        w_l_vma_buf = np.matmul(np.linalg.inv(sigma_l_vma0), sigma_l_vma1)
+        w_r_vma_buf = np.matmul(np.linalg.inv(sigma_r_vma0), sigma_r_vma1)
+        #self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
+        if k == 0:
+            self.w_l_vma = np.append(self.w_l_vma, w_l_vma_buf)[np.newaxis].T 
+            self.w_r_vma = np.append(self.w_r_vma, w_r_vma_buf)[np.newaxis].T 
+        else:
+            self.w_l_vma = np.append(self.w_l_vma, w_l_vma_buf, axis=1)
+            self.w_r_vma = np.append(self.w_r_vma, w_r_vma_buf, axis=1)
+        #-----------------------------------------------------------
+
+        end_time = time.time() - start
+        print("time_MA : {0}".format(end_time) + "[sec]")
+        print('w_l_vma :', k)
+        print(self.w_l_vma)
+        print('w_r_vma :', k)
+        print(self.w_r_vma)
+        #pdb.set_trace()
+    #------------------------------------------------------------
+
+    #------------------------------------------------------------
+    # ARIMAモデルの学習
+    # 
+    # y : 1 ~ N 日前の時系列データを格納した行列(ベクトル)
+    # e : 1 ~ N 日前のホワイトノイズを格納した行列(ベクトル)
+    def train(self):
+        start_train = time.time()
+        #------------------------------------------------------------
+        # 各キロ程ごとの時系列データ(amount日分)を取得し、y・e 行列(ベクトル)を作成
+        # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
+        for k in range(self.krage_length):
+            #self.kData = self.tData[self.tData['krage']==10000+k]
+            #self.kData = self.tData[k]
+            #self.kEps = self.eps[:,k]
+            #self.k = self.kData[self.kData['date'] == '2018-03-31']
+            self.kData = self.tData[:,k]
+            self.rData = self.right[:,k]
+            self.k_lEps = self.eps_l[:,k]
+            self.k_rEps = self.eps_r[:,k]
+
+            y_l = []
+            y_r = []
+            e_l = []
+            e_r = []
+            for i in range(self.N):
+                #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+                #------------------------------------------------------------
+                # 1階差分の計算
+                # 1番目の要素は普通に計算、それ以降は一つ前の要素から引いたものをリストに格納
+                if i == 0:
+                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    #pdb.set_trace()
+                    y_l.append(float(self.kData[i+1+self.s]))
+                    y_r.append(float(self.kData[i+1+self.s]))
+                    e_l.append(self.k_lEps[i+self.s])
+                    e_r.append(self.k_rEps[i+self.s])
+                else:
+                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    y_l.append(float(self.kData[i+1+self.s]))
+                    y_r.append(float(self.kData[i+1+self.s]))
+                    y_l[i-1] = y_l[i-1] - y_l[i]
+                    y_r[i-1] = y_r[i-1] - y_r[i]
+                    e_l.append(self.k_lEps[i+self.s])
+                    e_r.append(self.k_rEps[i+self.s])
+                    e_l[i-1] = e_l[i-1] - e_l[i]
+                    e_r[i-1] = e_r[i-1] - e_r[i]
+                #------------------------------------------------------------
+            y_l = np.array(y_l[:self.N-self.d])[np.newaxis].T
+            y_r = np.array(y_r[:self.N-self.d])[np.newaxis].T
+            e_l = np.array(e_l[:self.N-self.d])[np.newaxis].T
+            e_r = np.array(e_r[:self.N-self.d])[np.newaxis].T
+
+            #------------------------------------------------------------
+            # ARモデルとMAモデルの計算
+            self.VAR(y_l,y_r,k)
+            self.VMA(e_l,e_r,k)
+            #------------------------------------------------------------
+
+        #------------------------------------------------------------
+
+        end_time = time.time() - start_train
+        print("time : {0}".format(end_time) + "[sec]")
+    #------------------------------------------------------------
+
+    def multi_train(self):
+        with concurrent.futures.ProcessPoolExecutor(os.cpu_count()) as executor:
+            executor.submit(self.train)
+
+    def predict(self,t):
+        #pdb.set_trace()
+        date = []
+        y = []
+        for i in range(self.p):
+            date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
+            y = np.append(y, self.tData[self.tData['date'] == date[-1]]['hll'])
+        y = y.reshape([self.p,t.shape[0]])
+
+        y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + np.matmul(self.w_ma, self.eps[1:self.p]) + self.eps[0]
+        #y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + self.eps[0]
+        return y
+
+    def loss(self,tDate):
+        t = np.array(tDate['hll'])[np.newaxis]
+        #pdb.set_trace()
+        #t = t[t['date'] == '2018-03-31']
+        num = pow(t - self.predict(tDate),2)
+        loss = np.sum(num) / (t.shape[1])
+        return loss
+#------------------------------------------------------------
+
+class trackData():
+    dataPath = '../data'
+    def __init__(self):#trainの読み込み
+
+        self.train_xData = []
+        # self.test_xData = []
+        self.train_tData = []
+        # self.test_tData = []
+
+        fileind = ['A','B','C','D']
+
+        for no in range(len(fileind)):
+            fname_xTra = "track_xTrain_{}.binaryfile".format(fileind[no])
+            # fname_xTes = "xTest_{}.binaryfile".format(fileind[no])
+            fname_tTra = "track_tTrain_{}.binaryfile".format(fileind[no])
+            # fname_tTes = "tTest_{}.binaryfile".format(fileind[no])
+
+            self.load_file(fname_xTra,self.train_xData)
+            # self.load_file(fname_xTes,self.test_xData)
+            self.load_file(fname_tTra,self.train_tData)
+            # self.load_file(fname_tTes,self.test_tData)
+
+
+    def load_file(self,filename,data):
+        fullpath = os.path.join(self.dataPath, filename)
+        f = open(fullpath,'rb')
+        data.append(pickle.load(f))
+        f.close
+
+
+if __name__ == "__main__":
+
+    isWindows = False
+
+    fileind = ['A','B','C','D']
+
+    mytrackData = trackData()
+    #trackData.xData = [xData_A,xData_B,xData_C,xData_D]
+    #trackData.tData = [tData_A,tData_B,tData_C,tData_D]
+    # ar_A = Ar(mytrackData.xData[0],mytrackData.tData[0])
+    # T = tData[tData['date'] == '2018-03-31']
+    # w_A = ar_A.train()
+
+    w_l_var_list = []
+    w_r_var_list = []
+
+    w_l_vma_list = []
+    w_r_vma_list = []
+
+    eps_l_list = []
+    eps_r_list = []
+
+    start_all = time.time()
+    for no in range(len(fileind)):
+        varima = Varima(mytrackData.train_xData[no],mytrackData.train_tData[no])
+        varima.train()
+        w_l_var_list.append(varima.w_l_var)
+        w_r_var_list.append(varima.w_r_var)
+        w_l_vma_list.append(varima.w_l_vma)
+        w_r_vma_list.append(varima.w_r_vma)
+        eps_l_list.append(varima.eps_l)
+        eps_r_list.append(varima.eps_r)
+    end_time = time.time() - start_all
+    print("time : {0}".format(end_time) + "[sec]")
+
+
+    f_l_var = open("w_l_var_list.binaryfile","wb")
+    f_r_var = open("w_r_var_list.binaryfile","wb")
+    pickle.dump(w_l_var_list,f_l_var)
+    pickle.dump(w_r_var_list,f_r_var)
+    f_l_var.close()
+    f_r_var.close()
+
+    f_l_vma = open("w_l_vma_list.binaryfile","wb")
+    f_r_vma = open("w_r_vma_list.binaryfile","wb")
+    pickle.dump(w_l_vma_list,f_l_vma)
+    pickle.dump(w_r_vma_list,f_r_vma)
+    f_l_vma.close()
+    f_r_vma.close()
+    
+    f_eps_l = open("eps_l_list.binaryfile","wb")
+    f_eps_r = open("eps_r_list.binaryfile","wb")
+    pickle.dump(eps_l_list,f_eps_l)
+    pickle.dump(eps_r_list,f_eps_r)
+    f_eps_l.close()
+    f_eps_r.close()
+    
