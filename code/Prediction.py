@@ -122,7 +122,7 @@ if __name__ == "__main__":
     for i in range(1,fNum):
         output = pd.concat([output,y[i]],axis = 0)
 
-    output.index = rane(ouput.shape[0])
+    output.index = range(output.shape[0])
     f = open("output.csv","w")
     output.to_csv(f)
     f.close()
