@@ -62,11 +62,13 @@ class Varima():
 
         amount = self.tData.shape[0]
 
-        self.right = xData[0]
+        self.explain = []
+        for i in range(len(xData)):
+            self.explain.append(xData[i])
 
         self.kData = []
-        self.k_lEps = []
-        self.k_rEps = []
+        self.k_tEps = []
+        self.k_xEps = []
         self.N = 10
         self.p = 10
         self.q = 10
@@ -178,8 +180,8 @@ class Varima():
             z_l_vma0 = []
             z_r_vma0 = []
             for j in range(self.N-self.d):
-                z_l_vma0.append(self.k_lEps[(j+i+2+self.s):(j+i+3+self.s)][0])
-                z_r_vma0.append(self.k_rEps[(j+i+2+self.s):(j+i+3+self.s)][0])
+                z_l_vma0.append(self.k_tEps[(j+i+2+self.s):(j+i+3+self.s)][0])
+                z_r_vma0.append(self.k_xEps[(j+i+2+self.s):(j+i+3+self.s)][0])
             z_l_vma1.append(z_l_vma0)
             z_r_vma1.append(z_r_vma0)
         # p x (N-d) -> (N-d) x p (Z行列は(N-d) x p)
@@ -233,9 +235,9 @@ class Varima():
         # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
         for k in range(self.krage_length):
             self.kData = self.tData[:,k]
-            self.rData = self.right[:,k]
-            self.k_lEps = self.eps_l[:,k]
-            self.k_rEps = self.eps_r[:,k]
+            self.rData = self.explain[:,k]
+            self.k_tEps = self.eps_l[:,k]
+            self.k_xEps = self.eps_r[:,k]
 
             y_l = []
             y_r = []
@@ -250,8 +252,8 @@ class Varima():
                     y_l.append(float(self.kData[i+1+self.s]))
                     y_r.append(float(self.kData[i+1+self.s]))
                     # eリストに時系列データを格納
-                    e_l.append(self.k_lEps[i+self.s])
-                    e_r.append(self.k_rEps[i+self.s])
+                    e_l.append(self.k_tEps[i+self.s])
+                    e_r.append(self.k_xEps[i+self.s])
                 else:
                     # yリストに時系列データを格納                    
                     y_l.append(float(self.kData[i+1+self.s]))
@@ -260,8 +262,8 @@ class Varima():
                     y_l[i-1] -= y_l[i]
                     y_r[i-1] -= y_r[i]
                     # eリストに時系列データを格納
-                    e_l.append(self.k_lEps[i+self.s])
-                    e_r.append(self.k_rEps[i+self.s])
+                    e_l.append(self.k_tEps[i+self.s])
+                    e_r.append(self.k_xEps[i+self.s])
                     # 一つ前に格納したデータから引く
                     e_l[i-1] = e_l[i-1] - e_l[i]
                     e_r[i-1] = e_r[i-1] - e_r[i]
