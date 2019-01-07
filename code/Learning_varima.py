@@ -234,8 +234,7 @@ class Varima():
         # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
         for k in range(self.krage_length):
             self.kData = self.tData[:,k]
-            self.xData = self.explain[:,k]
-            pdb.set_trace()
+            self.xData = np.array(self.explain)[:,:,k]
             self.k_tEps = self.eps_l[:,k]
             self.k_xEps = self.eps_r[:,k]
 
