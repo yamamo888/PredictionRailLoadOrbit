@@ -33,58 +33,35 @@ class pre_processing:
 		self.equipment = {}
 		for no in ['A', 'B', 'C', 'D']:
 			self.equipment[no] = pd.read_csv(os.path.join(self.dataPath, "equipment_{}.csv".format(no)))
-		#pdb.set_trace()
 	#------------------------------------
+
 	#------------------------------------
 	#ホテリング理論
-	def hotelling_theory(self,data):	
+	def hotelling_theory(self,data):
 
 		anomaly_score=[]
-		
-		threshold = stats.chi2.interval(0.99,1)[1]		
-		
+
+		threshold = stats.chi2.interval(0.99,1)[1]
+
 		row = data.shape[1]
 		col = data.shape[2]
-		
+
 		for i in range(data.shape[0]):
 			mat = data[i].astype(float)
-		
+
 			mean = np.nanmean(mat)
 
 			var = np.nanvar(mat)
-			
-			anomaly_score_parts = np.array([])			
+
+			anomaly_score_parts = np.array([])
 
 			for x in data[i]:
 				y = (x - mean)**2/var
 				anomaly_score_parts=np.append(anomaly_score_parts,y)
-			
+
 			anomaly_score = np.reshape(anomaly_score_parts,(row,col))
-			
+
 			data[i][np.where(anomaly_score>threshold)]=np.nan
-		#pdb.set_trace()
-		
-		return data
-	#------------------------------------
-	# 四分位範囲をもとに外れ値をNaNにする
-	def outlier(self, data):
-		# dateとキロ程以外の列を処理する
-		for i in range(len(data.columns) - 2):
-			# 列の抽出
-			col = data.iloc[:, i+2]
-
-			# 四分位数
-			q1 = col.describe()['25%']
-			q3 = col.describe()['75%']
-			# 四分位範囲
-			iqr = q3 - q1
-			# 外れ値の基準
-			out_min = q1 - iqr * 1.5
-			out_max = q3 + iqr * 1.5
-
-			# 外れ値をNaNにする
-			col[col < out_min] = None
-			col[col < out_max] = None
 
 		return data
 	#------------------------------------
@@ -189,7 +166,7 @@ class pre_processing:
 		# 欠損値の予測
 		value = np.nansum(gauss * data_mat)
 		# 補完する
-		mat[row][col] = value	
+		mat[row][col] = value
 		return mat
 	#------------------------------------
 
@@ -202,7 +179,7 @@ class pre_processing:
 		# 行、列のサイズを取得
 		row_max = newMat.shape[0]
 		col_max = newMat.shape[1]
-		#pdb.set_trace()
+
 		# 補完するインデックスを取得
 		row, col = np.where(np.isnan(newMat) == True)
 
@@ -221,13 +198,6 @@ class pre_processing:
 	#------------------------------------
 	# 欠損値に対する処理を行う
 	def missing_values(self, data):
-	  	#pattern1
-		# 外れ値を処理
-		#print("start outliers")
-		#pdb.set_trace()
-		#newData = self.outlier(data)
-		#print("success outliers!!")
-
 		print("start reshape")
 		# 積み木の形にする
 		newData = self.data_reshape(data)
@@ -236,11 +206,13 @@ class pre_processing:
 		delete = self.get_del_index(data)
 		# 反転
 		delete = delete[::-1]
+		"""
+		# このプログラムでは外れ値の処理をしない
 		print("start searching outliers")
-		#pattern2
+		# ホテリング理論を用いて外れ値を処理
 		newData = self.hotelling_theory(newData)
 		print("success outliers!!")
-		#pdb.set_trace()
+		"""
 		# 削除ターン
 		print("start delete")
 		for i in range(delete.shape[0]):
@@ -249,11 +221,6 @@ class pre_processing:
 
 		# 補完ターン
 		print("start complement")
-		"""# とりあえず今は高低左についてのみ処理をする
-		newMat = newData
-		newMat = self.complement(newMat)
-		newData = newMat
-		"""
 		for j in range(self.track_label.shape[0]):
 			# 積み木のi番目のスライスをもってくる
 			newMat = newData[j,:,:]
@@ -261,9 +228,9 @@ class pre_processing:
 			newMat = self.complement(newMat)
 			# 補完済みのスライスを積み木に戻す
 			newData[j,:,:] = newMat
-		
+
 		print("success complement!!")
-		#pdb.set_trace()
+
 		return newData
 	#------------------------------------
 
@@ -272,17 +239,15 @@ class pre_processing:
 	def data_reshape(self,data):
 
 		reshaped_data = []
-		
-		data_values = data.values		
+
+		data_values = data.values
 
 		for i in range(data.shape[1]-2):
-			#pdb.set_trace()			
 			kiro = np.max(data_values.T[1])-np.min(data_values.T[1])+1
-			
+
 			data_new = np.reshape(data_values.T[i+2],(int(data_values.shape[0]/kiro),kiro))
 			reshaped_data.append(data_new)
-			#print("",i)
-		#pdb.set_trace()
+
 		numpy_data = np.array(reshaped_data)
 
 		return numpy_data
@@ -294,9 +259,6 @@ class pre_processing:
 		newData = self.missing_values(data)
 
 		# 目的変数は高低左
-		"""return newData
-		"""
-		# 高低左以外も扱えるように拡張
 		x = np.delete(newData, 0, axis=0)
 		t = newData[0,:,:]
 
@@ -316,13 +278,9 @@ class pre_processing:
 	def get_divide_data(self, no, flag):
 		# flagでtrackかequipmentを分ける
 		if(flag == 0):
-			#x = self.divide_track(self.track[no])
-			# 高低左以外も扱えるように拡張
 			x, t = self.divide_track(self.track[no])
 			testInd = int(len(self.track[no]) * self.testPer)
 		elif(flag == 1):
-			#x = self.divide_equipment(self.equipment[no])
-			# 高低左以外も扱えるように拡張
 			x, t = self.divide_equipment(self.equipment[no])
 			testInd = int(len(self.equipment[no]) * self.testPer)
 
@@ -332,7 +290,7 @@ class pre_processing:
 		# testデータははじめの2割
 		xTest = x[:testInd]
 		tTest = t[:testInd]
-		
+
 		#return xTrain, xTest
 		return xTrain, tTrain, xTest, tTest
 	#------------------------------------
@@ -352,8 +310,6 @@ class pre_processing:
 	# 前処理後のデータをバイナリファイルとして出力
 	def dump_data(self, no, flag):
 		# trainデータ、testデータを読み込む
-		#xTrain, xTest = self.get_divide_data(no, flag)
-		# 高低左以外も扱えるように拡張
 		xTrain, tTrain, xTest, tTest = self.get_divide_data(no, flag)
 
 		print("start dump")
@@ -399,7 +355,7 @@ if __name__ == "__main__":
 		myData.dump_data(no, 0)
 		# equipmentについて
 		myData.dump_data(no, 1)
-	
+
 	finish = time.time()
 	print("実行時間:{}".format(finish - start))
 #メインの終わり
