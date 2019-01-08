@@ -33,6 +33,7 @@ class pre_processing:
 		self.equipment = {}
 		for no in ['A', 'B', 'C', 'D']:
 			self.equipment[no] = pd.read_csv(os.path.join(self.dataPath, "equipment_{}.csv".format(no)))
+		#pdb.set_trace()
 	#------------------------------------
 	#------------------------------------
 	#ホテリング理論
