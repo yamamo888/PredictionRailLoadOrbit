@@ -46,7 +46,6 @@ import concurrent.futures
 # self.kData : キロ程ごとのデータを格納する変数
 # self.kEps  : キロ程ごとの誤差項を格納する変数
 #
-# ns_to_day  : [ns]をdayに変換するための変数
 # amount     : 扱うデータの総日数(365日とか)
 class Arima():
     def __init__(self,xData,tData):
@@ -58,13 +57,8 @@ class Arima():
 
         self.tNum = tData.shape[0]
 
-        # 秒を日にちに変換(86400 -> 1 みたいに)
-        #ns_to_day = 86400000000000
-        #amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-        #pdb.set_trace()
         amount = self.tData.shape[0]
 
-        #self.t = self.tData[self.tData['date'] == '2018-3-31']
         self.kData = []
         self.kEps = []
         self.N = 10
@@ -73,7 +67,6 @@ class Arima():
         self.d = 1
         self.s = 91
 
-        #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
         self.krage_length = self.tData.shape[1]
         self.w_ar = []
         self.w_ma = []
@@ -92,7 +85,6 @@ class Arima():
     # self.w_ar : (Z^T * Z + λI)^-1 * Z^T * y
     def AR(self,y,k):
         start = time.time()
-        date_ar = []
         z_ar1 = []
         
         #--------------------------------------------------
@@ -102,10 +94,7 @@ class Arima():
         for i in range(self.p):
             z_ar0 = []
             for j in range(self.N-self.d):
-                # date_arにj+i+2日前の日にち(str型)を保存
-                #date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
-                # date_arに保存されている日にちに対応するデータを列方向に追加
-                #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
+                # z_ar0にj+i+2日前のデータを保存
                 z_ar0.append(float(self.kData[j+i+2+self.s]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_ar1.append(z_ar0)        
@@ -122,7 +111,6 @@ class Arima():
         sigma_ar0 += 0.0000001 * np.eye(sigma_ar0.shape[0])
         sigma_ar1 = np.matmul(z_ar1.T, y)
         w_ar_buf = np.matmul(np.linalg.inv(sigma_ar0), sigma_ar1)
-        #self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1]) 
         if k == 0:
             self.w_ar = np.append(self.w_ar, w_ar_buf)[np.newaxis].T 
         else:
@@ -137,7 +125,7 @@ class Arima():
 
     #------------------------------------------------------------
     # MAモデル :
-    #   ホワイトノイズ(ε)で将来の予測を行う回帰
+    #   目的変数(hll)のホワイトノイズ(ε)で将来の予測を行う回帰
     #   self.N日のデータからself.p日遡って回帰を行う
     #
     # z_ma0     : self.w_maを求めるためのZ行列の列の要素
@@ -194,27 +182,19 @@ class Arima():
         # 各キロ程ごとの時系列データ(amount日分)を取得し、y・e 行列(ベクトル)を作成
         # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
         for k in range(self.krage_length):
-            #self.kData = self.tData[self.tData['krage']==10000+k]
-            #self.kData = self.tData[k]
-            #self.kEps = self.eps[:,k]
-            #self.k = self.kData[self.kData['date'] == '2018-03-31']
             self.kData = self.tData[:,k]
             self.kEps = self.eps[:,k]
 
             y = []
             e = []
             for i in range(self.N):
-                #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 #------------------------------------------------------------
                 # 1階差分の計算
                 # 1番目の要素は普通に計算、それ以降は一つ前の要素から引いたものをリストに格納
                 if i == 0:
-                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
-                    #pdb.set_trace()
                     y.append(float(self.kData[i+1+self.s]))
                     e.append(self.kEps[i+self.s])
                 else:
-                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
                     y.append(float(self.kData[i+1+self.s]))
                     y[i-1] = y[i-1] - y[i]
                     e.append(self.kEps[i+self.s])
@@ -235,30 +215,6 @@ class Arima():
         print("time : {0}".format(end_time) + "[sec]")
     #------------------------------------------------------------
 
-    def multi_train(self):
-        with concurrent.futures.ProcessPoolExecutor(os.cpu_count()) as executor:
-            executor.submit(self.train)
-
-    def predict(self,t):
-        #pdb.set_trace()
-        date = []
-        y = []
-        for i in range(self.p):
-            date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-            y = np.append(y, self.tData[self.tData['date'] == date[-1]]['hll'])
-        y = y.reshape([self.p,t.shape[0]])
-
-        y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + np.matmul(self.w_ma, self.eps[1:self.p]) + self.eps[0]
-        #y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + self.eps[0]
-        return y
-
-    def loss(self,tDate):
-        t = np.array(tDate['hll'])[np.newaxis]
-        #pdb.set_trace()
-        #t = t[t['date'] == '2018-03-31']
-        num = pow(t - self.predict(tDate),2)
-        loss = np.sum(num) / (t.shape[1])
-        return loss
 #------------------------------------------------------------
 
 class trackData():
@@ -318,12 +274,23 @@ if __name__ == "__main__":
     end_time = time.time() - start_all
     print("time : {0}".format(end_time) + "[sec]")
 
+    #--------------------------------------
+    # ARで求めた重みのリストをファイル出力
     f_ar = open("ar_w_list.binaryfile","wb")
-    f_ma = open("ma_w_list.binaryfile","wb")
-    f_eps = open("eps_list.binaryfile","wb")
     pickle.dump(ar_w_list,f_ar)
-    pickle.dump(ma_w_list,f_ma)
-    pickle.dump(eps_list,f_eps)
     f_ar.close()
+    #--------------------------------------
+    
+    #--------------------------------------
+    # MAで求めた重みのリストをファイル出力
+    f_ma = open("ma_w_list.binaryfile","wb")
+    pickle.dump(ma_w_list,f_ma)
     f_ma.close()
+    #--------------------------------------
+
+    #--------------------------------------
+    # MAで使用した ε のリストをファイル出力
+    f_eps = open("eps_list.binaryfile","wb")
+    pickle.dump(eps_list,f_eps)
     f_eps.close()
+    #--------------------------------------

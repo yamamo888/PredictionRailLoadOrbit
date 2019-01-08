@@ -44,7 +44,7 @@ class prediction():
         self.q = 10
         self.N = 10
         self.s = 91
-        self.x = x[0] #xTrainデータ:hll以外
+        self.x = x[0] #xTrainデータ:hlr
         self.t = t #tTrainデータ:hll
         self.days = self.t.shape[0] #日数
         self.krage_length = self.t.shape[1] #キロ程の総数
@@ -59,10 +59,9 @@ class prediction():
     def predict(self):
         y_l = self.t[-(self.p + self.s):-self.s]
         y_r = self.x[-(self.p + self.s):-self.s]
-        #y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
-        y = self.w_l_var[0] + self.w_r_var[0] + np.sum(self.w_l_var[1:]*y_l,axis=0) + np.sum(self.w_r_var[1:]*y_r,axis=0) - np.sum(self.w_l_vma[1:]*self.eps_l[1:self.q+1],axis=0) - np.sum(self.w_r_vma[1:]*self.eps_r[1:self.q+1],axis=0) + self.eps_l[0] + self.eps_r[0]
-        #y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) + self.eps[0]
-        #pdb.set_trace()
+        y_var = self.w_l_var[0] + self.w_r_var[0] + np.sum(self.w_l_var[1:]*y_l,axis=0) + np.sum(self.w_r_var[1:]*y_r,axis=0) 
+        y_vma = -np.sum(self.w_l_vma[1:]*self.eps_l[1:self.q+1],axis=0) - np.sum(self.w_r_vma[1:]*self.eps_r[1:self.q+1],axis=0) + self.eps_l[0] + self.eps_r[0]
+        y =  y_var + y_vma
         y = y.reshape(1,y.shape[0])
         self.t = np.append(self.t,y,axis=0)
 

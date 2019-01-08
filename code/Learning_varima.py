@@ -32,25 +32,26 @@ import pdb
 import concurrent.futures
 
 #------------------------------------------------------------
-# ARIMAモデルでの自己回帰 :
-#   ARモデルとMAモデルを融合させ、d階差時系列を採用したもの
-#   htitps://k-san.link/ar-process/を参照
+# VARIMAモデルでの自己回帰 :
+#   VARモデルとVMAモデルを融合させ、d階差時系列を採用したもの
+#   https://logics-of-blue.com/var%E3%83%A2%E3%83%87%E3%83%AB/ を参照
 #
-# self.N     : 使用する日数
-# self.p     : 遡る日数(ARモデル)
-# self.q     : 遡る日数(MAモデル)
-# self.d     : d次階差時系列
-# self.w_ar  : ARモデルでのパラメータ(重み)
-# self.w_ma  : MAモデルでのパラメータ(重み)
-# self.eps   : MAモデルで使用するホワイトノイズ
-# self.kData : キロ程ごとのデータを格納する変数
-# self.kEps  : キロ程ごとの誤差項を格納する変数
+# self.N        : 使用する日数
+# self.p        : 遡る日数(ARモデル)
+# self.q        : 遡る日数(MAモデル)
+# self.d        : d次階差時系列
+# self.w_l_var  : VARモデルでの目的変数(hll)のパラメータ(重み)
+# self.w_r_var  : VARモデルでの説明変数(hlr)のパラメータ(重み)
+# self.w_l_vma  : VMAモデルでの目的変数(hll)のパラメータ(重み)
+# self.w_r_vma  : VMAモデルでの説明変数(hlr)のパラメータ(重み)
+# self.eps_l    : VMAモデルで使用するホワイトノイズ(目的変数(hll))
+# self.eps_r    : VMAモデルで使用するホワイトノイズ(説明変数(hlr))
+# self.kData    : キロ程ごとのデータを格納する変数
+# self.kEps     : キロ程ごとの誤差項を格納する変数
 #
-# ns_to_day  : [ns]をdayに変換するための変数
-# amount     : 扱うデータの総日数(365日とか)
+# amount        : 扱うデータの総日数(365日とか)
 class Varima():
     def __init__(self,xData,tData):
-        self.xData = xData
         self.tData = tData
 
         self.xDim = xData.shape[1]-1
@@ -58,25 +59,21 @@ class Varima():
 
         self.tNum = tData.shape[0]
 
-        # 秒を日にちに変換(86400 -> 1 みたいに)
-        #ns_to_day = 86400000000000
-        #amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-        #pdb.set_trace()
         amount = self.tData.shape[0]
 
-        self.right = xData[0]
+        self.explain = []
+        for i in range(len(xData)):
+            self.explain.append(xData[i])
 
-        #self.t = self.tData[self.tData['date'] == '2018-3-31']
         self.kData = []
-        self.k_lEps = []
-        self.k_rEps = []
+        self.k_tEps = []
+        self.k_xEps = []
         self.N = 10
         self.p = 10
         self.q = 10
         self.d = 1
         self.s = 91
 
-        #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
         self.krage_length = self.tData.shape[1]
         
         self.w_l_var = []
@@ -89,23 +86,25 @@ class Varima():
         self.eps_l = np.random.normal(1,4,(amount,self.krage_length))
 
     #------------------------------------------------------------
-    # ARモデル :
+    # VARモデル :
     #   時系列データの目的変数のみで将来の予測を行う回帰
     #   self.N日のデータからself.p日遡って回帰を行う
     #
-    # z_ar0     : self.w_arを求めるためのZ行列の列の要素
-    # z_ar1     : self.w_arを求めるためのZ行列
-    # date_ar   : z_ar0の１要素
+    # z_l_var0     : self.w_l_varを求めるためのZ行列の列の要素
+    # z_r_var0     : self.w_r_varを求めるためのZ行列の列の要素
+    # z_l_var1     : self.w_l_varを求めるためのZ行列
+    # z_r_var1     : self.w_r_varを求めるためのZ行列
     #
-    # self.w_ar : (Z^T * Z + λI)^-1 * Z^T * y
+    # self.w_l_var : (Z^T * Z + λI)^-1 * Z^T * y
+    # self.w_r_var : (Z^T * Z + λI)^-1 * Z^T * y
     def VAR(self,y_l,y_r,k):
         start = time.time()
         z_l_var1 = []
         z_r_var1 = []
         
         #--------------------------------------------------
-        # ARモデルのパラメータを更新するための行列Zを導出
-        # htitps://k-san.link/ar-process/を参照
+        # VARモデルのパラメータを更新するための行列Zを導出
+        # https://logics-of-blue.com/var%E3%83%A2%E3%83%87%E3%83%AB/ を参照
         # for文の段階では p x (N-d) 行列
         for i in range(self.p):
             z_l_var0 = []
@@ -138,7 +137,7 @@ class Varima():
         
         w_l_var_buf = np.matmul(np.linalg.inv(sigma_l_var0), sigma_l_var1)
         w_r_var_buf = np.matmul(np.linalg.inv(sigma_r_var0), sigma_r_var1)
-        #self.w_ar = np.append(self.w_ar, w_ar_buf).reshape([self.p+1,k+1]) 
+
         if k == 0:
             self.w_l_var = np.append(self.w_l_var, w_l_var_buf)[np.newaxis].T 
             self.w_r_var = np.append(self.w_r_var, w_r_var_buf)[np.newaxis].T 
@@ -149,37 +148,39 @@ class Varima():
         
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
-        #print('w_r_var :', k)
-        #print(self.w_r_var)
-        #print('w_l_var :', k)
-        #print(self.w_l_var)
+        print('w_r_var :', k)
+        print(self.w_r_var)
+        print('w_l_var :', k)
+        print(self.w_l_var)
     #------------------------------------------------------------
 
     #------------------------------------------------------------
-    # MAモデル :
-    #   ホワイトノイズ(ε)で将来の予測を行う回帰
+    # VMAモデル :
+    #   目的変数(hll)と説明変数(hlr)のホワイトノイズ(ε)で将来の予測を行う回帰
     #   self.N日のデータからself.p日遡って回帰を行う
     #
-    # z_ma0     : self.w_maを求めるためのZ行列の列の要素
-    # z_ma1     : self.w_maを求めるためのZ行列
-    # date_ma   : z_ma0の１要素
+    # z_l_vma0     : self.w_l_vmaを求めるためのZ行列の列の要素
+    # z_r_vma0     : self.w_r_vmaを求めるためのZ行列の列の要素
+    # z_l_vma1     : self.w_l_vmaを求めるためのZ行列
+    # z_r_vma1     : self.w_r_vmaを求めるためのZ行列
     #
-    # self.w_ma : (Z^T * Z + λI)^-1 * Z^T * y
+    # self.w_l_vma : (Z^T * Z + λI)^-1 * Z^T * y
+    # self.w_r_vma : (Z^T * Z + λI)^-1 * Z^T * y
     def VMA(self,e_l,e_r,k):
         start = time.time()
         z_l_vma1 = []
         z_r_vma1 = []
         
         #-------------------------------------------------------------
-        # MAモデルのパラメータを更新するための行列Zを導出
-        # htitps://k-san.link/ar-process/を参照(ARモデルと基本同じ(多分))
+        # VMAモデルのパラメータを更新するための行列Zを導出
+        # https://logics-of-blue.com/var%E3%83%A2%E3%83%87%E3%83%AB/ を参照(VARモデルと基本同じ(多分))
         # このfor文の段階では q x (N-d) 行列
         for i in range(self.q):
             z_l_vma0 = []
             z_r_vma0 = []
             for j in range(self.N-self.d):
-                z_l_vma0.append(self.k_lEps[(j+i+2+self.s):(j+i+3+self.s)][0])
-                z_r_vma0.append(self.k_rEps[(j+i+2+self.s):(j+i+3+self.s)][0])
+                z_l_vma0.append(self.k_tEps[(j+i+2+self.s):(j+i+3+self.s)][0])
+                z_r_vma0.append(self.k_xEps[(j+i+2+self.s):(j+i+3+self.s)][0])
             z_l_vma1.append(z_l_vma0)
             z_r_vma1.append(z_r_vma0)
         # p x (N-d) -> (N-d) x p (Z行列は(N-d) x p)
@@ -194,13 +195,16 @@ class Varima():
         # self.w_maの更新
         sigma_l_vma0 = np.matmul(z_l_vma1.T, z_l_vma1)
         sigma_r_vma0 = np.matmul(z_r_vma1.T, z_r_vma1)
+
         sigma_l_vma0 += 0.0000001 * np.eye(sigma_l_vma0.shape[0])
         sigma_r_vma0 += 0.0000001 * np.eye(sigma_r_vma0.shape[0])
+
         sigma_l_vma1 = np.matmul(z_l_vma1.T, e_l)
         sigma_r_vma1 = np.matmul(z_r_vma1.T, e_r)
+
         w_l_vma_buf = np.matmul(np.linalg.inv(sigma_l_vma0), sigma_l_vma1)
         w_r_vma_buf = np.matmul(np.linalg.inv(sigma_r_vma0), sigma_r_vma1)
-        #self.w_ma = np.append(self.w_ma, w_ma_buf).reshape([self.q+1, k+1])
+
         if k == 0:
             self.w_l_vma = np.append(self.w_l_vma, w_l_vma_buf)[np.newaxis].T 
             self.w_r_vma = np.append(self.w_r_vma, w_r_vma_buf)[np.newaxis].T 
@@ -219,7 +223,7 @@ class Varima():
     #------------------------------------------------------------
 
     #------------------------------------------------------------
-    # ARIMAモデルの学習
+    # VARIMAモデルの学習
     # 
     # y : 1 ~ N 日前の時系列データを格納した行列(ベクトル)
     # e : 1 ~ N 日前のホワイトノイズを格納した行列(ベクトル)
@@ -229,83 +233,54 @@ class Varima():
         # 各キロ程ごとの時系列データ(amount日分)を取得し、y・e 行列(ベクトル)を作成
         # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
         for k in range(self.krage_length):
-            #self.kData = self.tData[self.tData['krage']==10000+k]
-            #self.kData = self.tData[k]
-            #self.kEps = self.eps[:,k]
-            #self.k = self.kData[self.kData['date'] == '2018-03-31']
             self.kData = self.tData[:,k]
-            self.rData = self.right[:,k]
-            self.k_lEps = self.eps_l[:,k]
-            self.k_rEps = self.eps_r[:,k]
+            self.xData = np.array(self.explain)[:,:,k]
+            self.k_tEps = self.eps_l[:,k]
+            self.k_xEps = self.eps_r[:,k]
 
             y_l = []
             y_r = []
             e_l = []
             e_r = []
             for i in range(self.N):
-                #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
                 #------------------------------------------------------------
                 # 1階差分の計算
-                # 1番目の要素は普通に計算、それ以降は一つ前の要素から引いたものをリストに格納
+                # 1番目の要素は普通に格納、それ以降は一つ前の要素から引いたものをリストに格納
                 if i == 0:
-                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
-                    #pdb.set_trace()
+                    # yリストに時系列データを格納
                     y_l.append(float(self.kData[i+1+self.s]))
                     y_r.append(float(self.kData[i+1+self.s]))
-                    e_l.append(self.k_lEps[i+self.s])
-                    e_r.append(self.k_rEps[i+self.s])
+                    # eリストに時系列データを格納
+                    e_l.append(self.k_tEps[i+self.s])
+                    e_r.append(self.k_xEps[i+self.s])
                 else:
-                    #y.append(float(self.kData[self.kData['date'] == date_y[-1]]['hll']))
+                    # yリストに時系列データを格納                    
                     y_l.append(float(self.kData[i+1+self.s]))
                     y_r.append(float(self.kData[i+1+self.s]))
-                    y_l[i-1] = y_l[i-1] - y_l[i]
-                    y_r[i-1] = y_r[i-1] - y_r[i]
-                    e_l.append(self.k_lEps[i+self.s])
-                    e_r.append(self.k_rEps[i+self.s])
+                    # 一つ前に格納したデータから引く
+                    y_l[i-1] -= y_l[i]
+                    y_r[i-1] -= y_r[i]
+                    # eリストに時系列データを格納
+                    e_l.append(self.k_tEps[i+self.s])
+                    e_r.append(self.k_xEps[i+self.s])
+                    # 一つ前に格納したデータから引く
                     e_l[i-1] = e_l[i-1] - e_l[i]
                     e_r[i-1] = e_r[i-1] - e_r[i]
                 #------------------------------------------------------------
+            # 一番後ろのデータは素のデータ(引かれてない)なので省く    
             y_l = np.array(y_l[:self.N-self.d])[np.newaxis].T
             y_r = np.array(y_r[:self.N-self.d])[np.newaxis].T
             e_l = np.array(e_l[:self.N-self.d])[np.newaxis].T
             e_r = np.array(e_r[:self.N-self.d])[np.newaxis].T
-
             #------------------------------------------------------------
-            # ARモデルとMAモデルの計算
+            # VARモデルとVMAモデルの計算
             self.VAR(y_l,y_r,k)
             self.VMA(e_l,e_r,k)
             #------------------------------------------------------------
-
         #------------------------------------------------------------
-
         end_time = time.time() - start_train
         print("time : {0}".format(end_time) + "[sec]")
     #------------------------------------------------------------
-
-    def multi_train(self):
-        with concurrent.futures.ProcessPoolExecutor(os.cpu_count()) as executor:
-            executor.submit(self.train)
-
-    def predict(self,t):
-        #pdb.set_trace()
-        date = []
-        y = []
-        for i in range(self.p):
-            date = np.append(date, (t['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-            y = np.append(y, self.tData[self.tData['date'] == date[-1]]['hll'])
-        y = y.reshape([self.p,t.shape[0]])
-
-        y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + np.matmul(self.w_ma, self.eps[1:self.p]) + self.eps[0]
-        #y = self.w_ar[0] + np.matmul(self.w_ar[1:].T, y) + self.eps[0]
-        return y
-
-    def loss(self,tDate):
-        t = np.array(tDate['hll'])[np.newaxis]
-        #pdb.set_trace()
-        #t = t[t['date'] == '2018-03-31']
-        num = pow(t - self.predict(tDate),2)
-        loss = np.sum(num) / (t.shape[1])
-        return loss
 #------------------------------------------------------------
 
 class trackData():
@@ -362,36 +337,48 @@ if __name__ == "__main__":
 
     start_all = time.time()
     for no in range(len(fileind)):
+        # Varimaクラスのインスタンス化
         varima = Varima(mytrackData.train_xData[no],mytrackData.train_tData[no])
+        # Varimaモデルの学習
         varima.train()
+        #--------------------------------------
+        # VAR・VMAで求めた重みを出力するためにリストに格納
         w_l_var_list.append(varima.w_l_var)
         w_r_var_list.append(varima.w_r_var)
         w_l_vma_list.append(varima.w_l_vma)
         w_r_vma_list.append(varima.w_r_vma)
         eps_l_list.append(varima.eps_l)
         eps_r_list.append(varima.eps_r)
+        #--------------------------------------        
     end_time = time.time() - start_all
     print("time : {0}".format(end_time) + "[sec]")
 
-
+    #--------------------------------------
+    # VARで求めた重みのリストをファイル出力            
     f_l_var = open("w_l_var_list.binaryfile","wb")
     f_r_var = open("w_r_var_list.binaryfile","wb")
     pickle.dump(w_l_var_list,f_l_var)
     pickle.dump(w_r_var_list,f_r_var)
     f_l_var.close()
     f_r_var.close()
-
+    #--------------------------------------
+    
+    #--------------------------------------
+    # VMAで求めた重みのリストをファイル出力
     f_l_vma = open("w_l_vma_list.binaryfile","wb")
     f_r_vma = open("w_r_vma_list.binaryfile","wb")
     pickle.dump(w_l_vma_list,f_l_vma)
     pickle.dump(w_r_vma_list,f_r_vma)
     f_l_vma.close()
     f_r_vma.close()
-    
+    #--------------------------------------
+
+    #--------------------------------------
+    # VMAで使用した ε のリストをファイル出力    
     f_eps_l = open("eps_l_list.binaryfile","wb")
     f_eps_r = open("eps_r_list.binaryfile","wb")
     pickle.dump(eps_l_list,f_eps_l)
     pickle.dump(eps_r_list,f_eps_r)
     f_eps_l.close()
     f_eps_r.close()
-    
+    #--------------------------------------    
