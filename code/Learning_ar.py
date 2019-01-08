@@ -58,10 +58,6 @@ class Arima():
 
         self.tNum = tData.shape[0]
 
-        # 秒を日にちに変換(86400 -> 1 みたいに)
-        #ns_to_day = 86400000000000
-        #amount = int((self.tData['date'][-1:].values - self.tData['date'][0:1].values)[0]/ns_to_day)+1
-        #pdb.set_trace()
         amount = self.tData.shape[0]
 
         #self.t = self.tData[self.tData['date'] == '2018-3-31']
