@@ -39,25 +39,26 @@ import pdb
 #self.eps : 学習で使用したホワイトノイズ
 #------------------------------------
 class prediction():
-    def __init__(self,w_ar,w_ma,x,t,eps):
+    def __init__(self,w_l_var,w_r_var,x,t,eps):
         self.p = 10
         self.q = 10
         self.N = 10
         self.s = 91
-        self.x = x #xTrainデータ:hll以外
+        self.x = x[0] #xTrainデータ:hll以外
         self.t = t #tTrainデータ:hll
         self.days = self.t.shape[0] #日数
         self.krage_length = self.t.shape[1] #キロ程の総数
-        self.w_ar = w_ar
-        self.w_ma = w_ma
+        self.w_l_var = w_l_var
+        self.w_r_var = w_r_var
         self.eps = eps
         # self.w = np.random.normal(0.0, pow(100, -0.5), (self.p + 1, 1)) #動作確認用のランダムなｗ
 
     def predict(self):
-        y = self.t[-(self.p + self.s):-self.s]
-        y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
-        #y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) + self.eps[0]
-        #pdb.set_trace()
+        y_l = self.t[-(self.p + self.s):-self.s]
+        y_r = self.x[-(self.p + self.s):-self.s]
+        #y = self.w_ar[0] + np.sum(self.w_ar[1:]*y,axis=0) - np.sum(self.w_ma*self.eps[1:self.q+2],axis=0) + self.eps[0]
+        #y = self.w_l_var[0] + np.sum(self.w_l_var[1:]*y_l,axis=0) + self.eps[0]
+        y = self.w_l_var[0] + self.w_r_var[0] + np.sum(self.w_l_var[1:]*y_l,axis=0) + np.sum(self.w_r_var[1:]*y_r,axis=0) + self.eps[0]
         y = y.reshape(1,y.shape[0])
         self.t = np.append(self.t,y,axis=0)
 
@@ -78,8 +79,8 @@ class prediction():
 
 class trackData():
     def __init__(self):
-        self.ar_w_list = self.load_file("ar_w_list.binaryfile")
-        self.ma_w_list = self.load_file("ma_w_list.binaryfile")
+        self.w_l_var_list = self.load_file("w_l_var_list.binaryfile")
+        self.w_r_var_list = self.load_file("w_r_var_list.binaryfile")
         self.eps_list = self.load_file("eps_list.binaryfile")
         self.xTrain_list = []
         self.tTrain_list = []
@@ -107,7 +108,7 @@ if __name__ == "__main__":
     y = [] #予測した高低左(A~Dの４つ)を格納
 
     for j in range(fNum):
-        pre = prediction(myData.ar_w_list[j],myData.ma_w_list[j],myData.xTrain_list[j],myData.tTrain_list[j],myData.eps_list[j])
+        pre = prediction(myData.w_l_var_list[j],myData.w_r_var_list[j],myData.xTrain_list[j],myData.tTrain_list[j],myData.eps_list[j])
         # pre = prediction(0,myData.xTrain_list[j],myData.tTrain_list[j]) #動作確認用
         for _ in range(nite):
             pre.predict() #次の日を予測する
