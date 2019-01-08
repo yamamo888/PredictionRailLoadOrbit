@@ -134,7 +134,7 @@ class pre_processing:
 		mat = self.missing_values(data)
 
 		# 目的変数は高低左
-		
+		x = np.delete(mat,0,axis=1)
 		t = mat[:,0]
 
 		return x, t
