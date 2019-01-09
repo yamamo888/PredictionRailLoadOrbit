@@ -56,9 +56,10 @@ class Varima():
 
         amount = self.tData.shape[0]
 
-        self.explain = []
-        for i in range(len(xData)):
-            self.explain.append(xData[i])
+        #self.explain = []
+        #for i in range(len(xData)):
+        #    self.explain.append(xData[i])
+        self.right = xData[0]
 
         self.kData = []
         self.k_tEps = []
@@ -67,7 +68,7 @@ class Varima():
         self.p = 10
         self.q = 10
         self.d = 1
-        self.s = 91
+        self.s = -(91+self.p)
 
         self.krage_length = self.tData.shape[1]
         
@@ -106,8 +107,8 @@ class Varima():
             z_x_var0 = []
             for j in range(self.N-self.d):
                 # z_t_var0にj+i+2日前のデータを格納
-                z_t_var0.append(float(self.kData[j+i+2+self.s]))
-                z_x_var0.append(float(self.xData[j+i+2+self.s]))
+                z_t_var0.append(float(self.kData[j+i+self.s-2]))
+                z_x_var0.append(float(self.xData[j+i+self.s-2]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_t_var1.append(z_t_var0)
             z_x_var1.append(z_x_var0)
@@ -144,9 +145,9 @@ class Varima():
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_x_var :', k)
-        print(self.w_x_var)
+        #print(self.w_x_var)
         print('w_t_var :', k)
-        print(self.w_t_var)
+        #print(self.w_t_var)
     #------------------------------------------------------------
 
     #------------------------------------------------------------
@@ -174,8 +175,8 @@ class Varima():
             z_t_vma0 = []
             z_x_vma0 = []
             for j in range(self.N-self.d):
-                z_t_vma0.append(self.k_tEps[(j+i+2+self.s):(j+i+3+self.s)][0])
-                z_x_vma0.append(self.k_xEps[(j+i+2+self.s):(j+i+3+self.s)][0])
+                z_t_vma0.append(self.k_tEps[(j+i+self.s-3):(j+i+self.s-2)][0])
+                z_x_vma0.append(self.k_xEps[(j+i+self.s-3):(j+i+self.s-2)][0])
             z_t_vma1.append(z_t_vma0)
             z_x_vma1.append(z_x_vma0)
         # p x (N-d) -> (N-d) x p (Z行列は(N-d) x p)
@@ -211,9 +212,9 @@ class Varima():
         end_time = time.time() - start
         print("time_MA : {0}".format(end_time) + "[sec]")
         print('w_t_vma :', k)
-        print(self.w_t_vma)
+        #print(self.w_t_vma)
         print('w_x_vma :', k)
-        print(self.w_x_vma)
+        #print(self.w_x_vma)
         #pdb.set_trace()
     #------------------------------------------------------------
 
@@ -229,7 +230,8 @@ class Varima():
         # 行列の掛け算を行うために[np.newaxis]をy・e行列(ベクトル)にかけている
         for k in range(self.krage_length):
             self.kData = self.tData[:,k]
-            self.xData = np.array(self.explain)[:,:,k]
+            #self.xData = np.array(self.explain)[:,:,k]
+            self.xData = self.right[:,k]
             self.k_tEps = self.eps_t[:,k]
             self.k_xEps = self.eps_x[:,k]
 
@@ -243,15 +245,15 @@ class Varima():
                 # 1番目の要素は普通に格納、それ以降は一つ前の要素から引いたものをリストに格納
                 if i == 0:
                     # yリストに時系列データを格納
-                    y_t.append(float(self.kData[i+1+self.s]))
-                    y_x.append(float(self.kData[i+1+self.s]))
+                    y_t.append(float(self.kData[i+self.s-1]))
+                    y_x.append(float(self.kData[i+self.s-1]))
                     # eリストに時系列データを格納
                     e_t.append(self.k_tEps[i+self.s])
                     e_r.append(self.k_xEps[i+self.s])
                 else:
                     # yリストに時系列データを格納                    
-                    y_t.append(float(self.kData[i+1+self.s]))
-                    y_x.append(float(self.kData[i+1+self.s]))
+                    y_t.append(float(self.kData[i+self.s-1]))
+                    y_x.append(float(self.kData[i+self.s-1]))
                     # 一つ前に格納したデータから引く
                     y_t[i-1] -= y_t[i]
                     y_x[i-1] -= y_x[i]
