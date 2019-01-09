@@ -64,7 +64,7 @@ class Arima():
         self.kData = []
         self.N = 10
         self.p = 10
-        self.s = 91
+        self.s = -(91+self.p)
 
         #self.krage_length = xData[xData["date"] == dt.datetime(2017,4,10,00,00,00)]["krage"].shape[0]
         self.krage_length = self.tData.shape[1]
@@ -98,7 +98,7 @@ class Arima():
                 #date_ar = np.array((self.kData['date'][-1:] - datetime.timedelta(days=j+i+2)).astype(str))
                 # date_arに保存されている日にちに対応するデータを列方向に追加
                 #z_ar0.append(float(self.kData[self.kData['date'] == date_ar[-1]]['hll']))
-                z_ar0.append(float(self.kData[j+i+2+self.s]))
+                z_ar0.append(float(self.kData[j+i+self.s-2]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_ar1.append(z_ar0)        
         # p x (N-d) -> (N-d) x p (Z行列はN x p)
@@ -106,6 +106,7 @@ class Arima():
         # y = wx + b の線形回帰の式のbをWに融合させるために最後の列に1の列を追加
         z_ar1 = np.append(z_ar1, np.ones([z_ar1.shape[0],1]),axis=1)
         #--------------------------------------------------
+        
         #-----------------------------------------------------------
         # self.w_arの更新
         sigma_ar0 = np.matmul(z_ar1.T, z_ar1)
@@ -123,7 +124,7 @@ class Arima():
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_ar :', k)
-        print(self.w_ar)
+        #print(self.w_ar)
     #------------------------------------------------------------
 
     #------------------------------------------------------------
@@ -145,7 +146,7 @@ class Arima():
             y = []
             for i in range(self.N):
                 #date_y = np.array((self.kData['date'][-1:] - datetime.timedelta(days=i+1)).astype(str))
-                y.append(float(self.kData[i+1+self.s]))
+                y.append(float(self.kData[i+self.s-1]))
             y = np.array(y)[np.newaxis].T
 
             #------------------------------------------------------------
