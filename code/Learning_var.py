@@ -60,7 +60,7 @@ class Arima():
         self.kData = []
         self.N = 10
         self.p = 10
-        self.s = 91
+        self.s = -(91+self.p)
 
         self.krage_length = self.tData.shape[1]
         self.w_l_var = []
@@ -92,8 +92,8 @@ class Arima():
             z_r_var0 = []
             for j in range(self.N):
                 # z_l_var0にj+i+2日前のデータを格納
-                z_l_var0.append(float(self.kData[j+i+2+self.s]))
-                z_r_var0.append(float(self.rData[j+i+2+self.s]))
+                z_l_var0.append(float(self.kData[j+i+self.s-2]))
+                z_r_var0.append(float(self.rData[j+i+self.s-2]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_l_var1.append(z_l_var0)
             z_r_var1.append(z_r_var0)
@@ -152,8 +152,8 @@ class Arima():
             y_l = []
             y_r = []
             for i in range(self.N):
-                y_l.append(float(self.kData[i+1+self.s]))
-                y_r.append(float(self.kData[i+1+self.s]))
+                y_l.append(float(self.kData[i+self.s-1]))
+                y_r.append(float(self.kData[i+self.s-1]))
             y_l = np.array(y_l)[np.newaxis].T
             y_r = np.array(y_r)[np.newaxis].T
 
