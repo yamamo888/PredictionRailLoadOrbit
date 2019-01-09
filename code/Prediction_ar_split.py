@@ -1,6 +1,6 @@
 import pickle
 import numpy as np
-
+import pdb
 
 
 class prediction():
@@ -20,9 +20,10 @@ class prediction():
                 if index != []:
                     for k in range(index.shape[0]):
                         ind = int(index[k])
+                        pdb.set_trace()
                         w_ij = w[k]
                         x = self.t[-p:,ind]
-                        out[0,ind] = w_ij[0] + np.sum(w_ij[1:]*x,axis=0)
+                        out[0,ind] = w_ij[0] + np.sum(w_ij[1:]*x)
 
         self.t = np.append(self.t,out,axis=0)
 
@@ -38,7 +39,7 @@ class data():
         self.ind_list = self.file_load(f_ind_list)
 
         for i in range(len(find)):
-            fname = "track_tTrain_{}.binaryfile".format(fileind[no])
+            fname = "track_tTrain_{}.binaryfile".format(find[i])
             self.tData.append(self.file_load(fname))
 
 
@@ -56,8 +57,8 @@ if __name__ == "__main__":
 
     output = []
 
-    for i in renge(myData.fNum):
-        pre = prediction(myData.tData,myData.wlist[i],myData.ind_list[i])
+    for i in range(myData.fNum):
+        pre = prediction(myData.tData[i],myData.wlist[i],myData.ind_list[i])
         for _ in range(pre_day):
             pre.predict(p)
         out = pre.tData[-pre_day:].reshape(1,pre_day*pre.lenkr)
