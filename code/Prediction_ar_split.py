@@ -21,7 +21,7 @@ class prediction():
                     for k in range(index.shape[0]):
                         ind = int(index[k])
                         pdb.set_trace()
-                        w_ij = w[k]
+                        w_ij = w[:,ind]
                         x = self.t[-p:,ind]
                         out[0,ind] = w_ij[0] + np.sum(w_ij[1:]*x)
 
@@ -39,7 +39,7 @@ class data():
         self.ind_list = self.file_load(f_ind_list)
 
         for i in range(len(find)):
-            fname = "track_tTrain_{}.binaryfile".format(find[i])
+            fname = "../data/track_tTrain_{}.binaryfile".format(find[i])
             self.tData.append(self.file_load(fname))
 
 
@@ -61,12 +61,13 @@ if __name__ == "__main__":
         pre = prediction(myData.tData[i],myData.wlist[i],myData.ind_list[i])
         for _ in range(pre_day):
             pre.predict(p)
-        out = pre.tData[-pre_day:].reshape(1,pre_day*pre.lenkr)
+        out = pre.t[-pre_day:].reshape(1,pre_day*pre.lenkr)
         output.append(out)
 
     result = pd.DataFrame(output[0])
     for i in range(1,myData.fNum):
-        result = pd.concat([result,output[i]],axis=0)
+        df = pd.DataFrame(output[i])
+        result = pd.concat([result,df],axis=0)
     result.index = result.shape[0]
 
     f = open("output_ar_split.csv","w")
