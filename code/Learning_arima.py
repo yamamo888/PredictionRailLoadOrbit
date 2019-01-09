@@ -65,7 +65,7 @@ class Arima():
         self.p = 10
         self.q = 10
         self.d = 1
-        self.s = 91
+        self.s = -(91+self.p)
 
         self.krage_length = self.tData.shape[1]
         self.w_ar = []
@@ -95,7 +95,7 @@ class Arima():
             z_ar0 = []
             for j in range(self.N-self.d):
                 # z_ar0にj+i+2日前のデータを保存
-                z_ar0.append(float(self.kData[j+i+2+self.s]))
+                z_ar0.append(float(self.kData[j+i+self.s-2]))
             # 行方向にz_ar0を追加しZ行列を生成
             z_ar1.append(z_ar0)        
         # p x (N-d) -> (N-d) x p (Z行列はN x p)
@@ -120,7 +120,7 @@ class Arima():
         end_time = time.time() - start
         print("time_AR : {0}".format(end_time) + "[sec]")
         print('w_ar :', k)
-        print(self.w_ar)
+        #print(self.w_ar)
     #------------------------------------------------------------
 
     #------------------------------------------------------------
@@ -144,7 +144,7 @@ class Arima():
         for i in range(self.q):
             z_ma0 = []
             for j in range(self.N-self.d):
-                z_ma0.append(self.kEps[(j+i+2+self.s):(j+i+3+self.s)][0])
+                z_ma0.append(self.kEps[(j+i+self.s-3):(j+i+self.s-2)][0])
             z_ma1.append(z_ma0)
         # p x (N-d) -> (N-d) x p (Z行列は(N-d) x p)
         z_ma1 = np.array(z_ma1).T
@@ -168,7 +168,7 @@ class Arima():
         end_time = time.time() - start
         print("time_MA : {0}".format(end_time) + "[sec]")
         print('w_ma :', k)
-        print(self.w_ma)
+        #print(self.w_ma)
     #------------------------------------------------------------
 
     #------------------------------------------------------------
@@ -192,10 +192,10 @@ class Arima():
                 # 1階差分の計算
                 # 1番目の要素は普通に計算、それ以降は一つ前の要素から引いたものをリストに格納
                 if i == 0:
-                    y.append(float(self.kData[i+1+self.s]))
+                    y.append(float(self.kData[i+self.s-1]))
                     e.append(self.kEps[i+self.s])
                 else:
-                    y.append(float(self.kData[i+1+self.s]))
+                    y.append(float(self.kData[i+self.s-1]))
                     y[i-1] = y[i-1] - y[i]
                     e.append(self.kEps[i+self.s])
                     e[i-1] = e[i-1] - e[i]
