@@ -113,7 +113,6 @@ if __name__ == "__main__":
             pre.predict() #次の日を予測する
         out = pre.t[pre.days:]
         out = pd.DataFrame(out.reshape(out.shape[0]*out.shape[1],1))
-        #pdb.set_trace()
         #y.append(out[:,1])
         y.append(out[:])
 
